@@ -1,0 +1,178 @@
+:root {
+  --navy:        #0B2942;
+  --ink:         #0B2942;
+  --ink-2:       #51647A;
+  --ink-3:       #93A2B5;
+  --blue:        #0E63C4;
+  --blue-700:    #0A4E9E;
+  --blue-soft:   #E8F1FC;
+  --accent:      #FF6D00;
+  --accent-700:  #E25F00;
+  --accent-soft: #FFF1E6;
+  --green:       #12A06A;
+  --green-soft:  #E4F6EE;
+  --red:         #E0463C;
+  --red-soft:    #FCEBEA;
+  --bg:          #F4F6F9;
+  --card:        #FFFFFF;
+  --line:        #E5EAF0;
+
+  /* Aliases para compatibilidad con estilos inline existentes */
+  --primary:       var(--blue);
+  --primary-light: var(--blue-700);
+  --text:          var(--ink);
+  --muted:         var(--ink-2);
+  --border:        var(--line);
+  --danger:        var(--red);
+  --success:       var(--green);
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  background: var(--bg);
+  color: var(--ink);
+  -webkit-font-smoothing: antialiased;
+}
+
+a { color: var(--blue); text-decoration: none; }
+a:hover { text-decoration: underline; }
+
+/* Botones */
+button {
+  font-family: inherit;
+  cursor: pointer;
+  border: none;
+  padding: 10px 16px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  background: var(--blue);
+  color: white;
+  transition: background 0.12s, box-shadow 0.12s;
+}
+button:hover:not(:disabled) { background: var(--blue-700); }
+button:active:not(:disabled) { box-shadow: inset 0 1px 3px rgba(0,0,0,0.18); }
+button:disabled { opacity: 0.5; cursor: not-allowed; }
+
+button.secondary {
+  background: var(--card);
+  color: var(--ink);
+  border: 1px solid var(--line);
+}
+button.secondary:hover:not(:disabled) { background: var(--bg); }
+
+button.accent {
+  background: var(--accent);
+  color: white;
+}
+button.accent:hover:not(:disabled) { background: var(--accent-700); }
+
+button.danger { background: var(--red); }
+button.danger:hover:not(:disabled) { background: #c73c33; }
+
+button.success { background: var(--green); }
+button.success:hover:not(:disabled) { background: #0e8a5b; }
+
+/* Inputs */
+input, select, textarea {
+  font-family: inherit;
+  font-size: 14px;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: white;
+  color: var(--ink);
+  width: 100%;
+  transition: border-color 0.12s, box-shadow 0.12s;
+}
+input:focus, select:focus, textarea:focus {
+  outline: none;
+  border-color: var(--blue);
+  box-shadow: 0 0 0 3px var(--blue-soft);
+}
+input::placeholder, textarea::placeholder { color: var(--ink-3); }
+
+/* Layout */
+.container {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 24px 16px;
+}
+
+/* Card */
+.card {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 20px;
+  margin-bottom: 16px;
+  box-shadow: 0 1px 3px rgba(11, 41, 66, 0.07);
+}
+
+.label {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+  margin-bottom: 6px;
+  color: var(--ink);
+}
+
+.row { display: flex; gap: 12px; }
+.row > * { flex: 1; }
+
+/* Badges */
+.badge {
+  display: inline-block;
+  padding: 2px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+}
+.badge-publicado { background: var(--blue-soft);  color: var(--blue); }
+.badge-pendiente { background: var(--blue-soft);  color: var(--blue); }
+.badge-confirmado { background: var(--green-soft); color: var(--green); }
+.badge-aceptada   { background: var(--green-soft); color: var(--green); }
+.badge-cancelado  { background: var(--red-soft);   color: var(--red); }
+.badge-rechazada  { background: var(--red-soft);   color: var(--red); }
+
+.muted { color: var(--ink-2); font-size: 13px; }
+
+/* Navbar */
+.navbar {
+  background: var(--navy);
+  color: white;
+  padding: 0 24px;
+  height: 56px;
+  display: flex;
+  gap: 20px;
+  align-items: center;
+  box-shadow: 0 1px 4px rgba(11, 41, 66, 0.2);
+}
+.navbar a {
+  color: rgba(255, 255, 255, 0.8);
+  font-weight: 500;
+  font-size: 14px;
+  transition: color 0.12s;
+}
+.navbar a:hover { color: white; text-decoration: none; }
+.navbar .spacer { flex: 1; }
+.navbar .logo {
+  font-weight: 800;
+  font-size: 18px;
+  color: white;
+  letter-spacing: -0.3px;
+}
+.navbar .logo:hover { color: white; }
+
+/* Login — fondo navy con gradient radial */
+.login-bg {
+  min-height: 100vh;
+  background: radial-gradient(ellipse at 60% 0%, #1a4a7a 0%, var(--navy) 55%, #06172a 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px 16px;
+}

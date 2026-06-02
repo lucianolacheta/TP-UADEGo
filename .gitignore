@@ -1,0 +1,17 @@
+node_modules
+dist
+dist-ssr
+.env
+.env.local
+.env.*.local
+.DS_Store
+*.log
+.vscode/*
+!.vscode/extensions.json
+.idea
+
+# Artefactos de build de TypeScript
+*.tsbuildinfo
+
+# Config local de Claude Code (personal, no del equipo)
+.claude/settings.local.json
