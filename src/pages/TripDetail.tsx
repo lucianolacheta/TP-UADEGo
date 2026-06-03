@@ -3,6 +3,7 @@ import { useParams, Link } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
 import type { ViajeConConductor, Solicitud } from '../lib/types'
+import { costoPorPersona } from '../lib/viajeUtils'
 
 export default function TripDetail() {
   const { id } = useParams<{ id: string }>()
@@ -14,7 +15,10 @@ export default function TripDetail() {
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
 
-  useEffect(() => { if (id) cargar() }, [id])
+  useEffect(() => {
+    if (id && usuario) cargar()
+    else if (!usuario) setLoading(false)
+  }, [id, usuario])
 
   async function cargar() {
     if (!id || !usuario) return
@@ -43,7 +47,7 @@ export default function TripDetail() {
       viaje_id: viaje.id,
       pasajero_id: usuario.id,
       mensaje: mensaje || null,
-      estado: 'pendiente'
+      estado: 'pendiente',
     })
     setEnviando(false)
     if (error) setError(error.message)
@@ -55,20 +59,25 @@ export default function TripDetail() {
 
   const esElConductor = usuario?.id === viaje.conductor_id
   const sinCupos = viaje.cupos_disponibles === 0
+  const encuentro = viaje.punto_encuentro ?? viaje.notas ?? 'A coordinar'
+  const porPersona = costoPorPersona(viaje.costo_estimado, viaje.cupos)
 
   return (
     <div>
-      <Link to="/">← Volver</Link>
-      <div className="card" style={{ marginTop: 12 }}>
-        <h2 style={{ marginTop: 0 }}>{viaje.origen} → {viaje.destino}</h2>
-        <span className={`badge badge-${viaje.estado}`}>{viaje.estado}</span>
+      <Link to="/" className="back-link">← Volver</Link>
+      <div className="card">
+        <div className="card-header">
+          <h2 style={{ margin: 0 }}>{viaje.origen} → {viaje.destino}</h2>
+          <span className={`badge badge-${viaje.estado}`}>{viaje.estado}</span>
+        </div>
 
         <div style={{ marginTop: 16 }}>
           <p><strong>Fecha:</strong> {viaje.fecha}</p>
           <p><strong>Horario:</strong> {viaje.horario.slice(0, 5)} hs</p>
-          <p><strong>Cupos disponibles:</strong> {viaje.cupos_disponibles} de {viaje.cupos}</p>
-          <p><strong>Costo estimado:</strong> ${viaje.costo_estimado}</p>
-          {viaje.notas && <p><strong>Notas:</strong> {viaje.notas}</p>}
+          <p><strong>Cupos:</strong> {viaje.cupos_disponibles} de {viaje.cupos} disponibles</p>
+          <p><strong>Costo por persona:</strong> ${porPersona} <span className="muted">(total ${viaje.costo_estimado})</span></p>
+          <p><strong>Punto de encuentro:</strong> {encuentro}</p>
+          {viaje.notas && viaje.punto_encuentro && <p><strong>Notas:</strong> {viaje.notas}</p>}
           <p className="muted">Conductor: {viaje.conductor?.nombre} {viaje.conductor?.validado_uade && '· ✓ UADE'}</p>
         </div>
       </div>
@@ -90,7 +99,7 @@ export default function TripDetail() {
             onChange={e => setMensaje(e.target.value)}
             placeholder="Hola! Salgo cerca de..."
           />
-          <button onClick={solicitar} disabled={enviando} style={{ marginTop: 12 }}>
+          <button onClick={solicitar} disabled={enviando} className="field-spaced">
             {enviando ? 'Enviando...' : 'Solicitar lugar'}
           </button>
           {error && <p style={{ color: 'var(--danger)' }}>{error}</p>}
@@ -101,7 +110,11 @@ export default function TripDetail() {
         <div className="card">
           <p>Tu solicitud está: <span className={`badge badge-${solicitudPropia.estado}`}>{solicitudPropia.estado}</span></p>
           {solicitudPropia.estado === 'aceptada' && (
-            <p style={{ color: 'var(--success)' }}>¡Viaje confirmado! Coordiná el punto de encuentro con el conductor.</p>
+            <>
+              <p style={{ color: 'var(--success)' }}>¡Viaje confirmado!</p>
+              <p><strong>Encontrate en:</strong> {encuentro}</p>
+              <p><strong>Aportá aprox.:</strong> ${porPersona}</p>
+            </>
           )}
         </div>
       )}

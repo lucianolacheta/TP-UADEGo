@@ -4,7 +4,7 @@ import { useAuth } from '../contexts/AuthContext'
 import type { RolUsuario } from '../lib/types'
 
 export default function Profile() {
-  const { usuario, refreshUsuario } = useAuth()
+  const { usuario, refreshUsuario, signOut } = useAuth()
   const [form, setForm] = useState<{ nombre: string; zona: string; horario_habitual: string; telefono: string; rol: RolUsuario }>(
     { nombre: '', zona: '', horario_habitual: '', telefono: '', rol: 'pasajero' }
   )
@@ -41,14 +41,14 @@ export default function Profile() {
         <label className="label">Nombre</label>
         <input value={form.nombre} onChange={e => setForm({ ...form, nombre: e.target.value })} required />
 
-        <label className="label" style={{ marginTop: 12 }}>Rol</label>
+        <label className="label field-spaced">Rol</label>
         <select value={form.rol} onChange={e => setForm({ ...form, rol: e.target.value as RolUsuario })}>
           <option value="pasajero">Pasajero</option>
           <option value="conductor">Conductor</option>
           <option value="ambos">Ambos</option>
         </select>
 
-        <div className="row" style={{ marginTop: 12 }}>
+        <div className="row field-spaced">
           <div>
             <label className="label">Zona</label>
             <input value={form.zona} onChange={e => setForm({ ...form, zona: e.target.value })} placeholder="Ej. Belgrano" />
@@ -59,13 +59,16 @@ export default function Profile() {
           </div>
         </div>
 
-        <label className="label" style={{ marginTop: 12 }}>Teléfono (para coordinar)</label>
-        <input value={form.telefono} onChange={e => setForm({ ...form, telefono: e.target.value })} />
+        <label className="label field-spaced">Teléfono (para coordinar)</label>
+        <input value={form.telefono} onChange={e => setForm({ ...form, telefono: e.target.value })} inputMode="tel" />
 
-        <button type="submit" disabled={guardando} style={{ marginTop: 16 }}>
-          {guardando ? 'Guardando...' : 'Guardar'}
-        </button>
-        {ok && <span style={{ color: 'var(--success)', marginLeft: 12 }}>Guardado ✓</span>}
+        <div className="form-actions">
+          <button type="submit" disabled={guardando}>
+            {guardando ? 'Guardando...' : 'Guardar'}
+          </button>
+          {ok && <span className="ok-msg">Guardado ✓</span>}
+          <button type="button" className="secondary" onClick={signOut}>Cerrar sesión</button>
+        </div>
       </form>
     </div>
   )

@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Navigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 
@@ -8,6 +8,13 @@ export default function Login() {
   const [enviando, setEnviando] = useState(false)
   const [mensaje, setMensaje] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    const hashParams = new URLSearchParams(window.location.hash.replace(/^#/, ''))
+    const authError = params.get('error_description') ?? hashParams.get('error_description')
+    if (authError) setError(decodeURIComponent(authError.replace(/\+/g, ' ')))
+  }, [])
 
   if (loading) return <div style={{ padding: 32 }}>Cargando...</div>
   if (session) return <Navigate to="/" replace />

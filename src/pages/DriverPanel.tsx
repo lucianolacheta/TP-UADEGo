@@ -59,7 +59,7 @@ export default function DriverPanel() {
         const aceptadas = sols.filter(s => s.estado === 'aceptada')
         return (
           <div key={v.id} className="card">
-            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+            <div className="card-header">
               <strong>{v.origen} → {v.destino}</strong>
               <span className={`badge badge-${v.estado}`}>{v.estado}</span>
             </div>
@@ -69,15 +69,12 @@ export default function DriverPanel() {
               <div style={{ marginTop: 12 }}>
                 <h4 style={{ margin: '8px 0' }}>Solicitudes pendientes</h4>
                 {pendientes.map(s => (
-                  <div key={s.id} style={{
-                    display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                    padding: 12, border: '1px solid var(--border)', borderRadius: 8, marginBottom: 8
-                  }}>
+                  <div key={s.id} className="solicitud-item">
                     <div>
                       <strong>{s.pasajero.nombre}</strong>
-                      <p className="muted" style={{ margin: '4px 0' }}>{s.mensaje ?? 'Sin mensaje'}</p>
+                      <p className="muted" style={{ margin: '4px 0 0' }}>{s.mensaje ?? 'Sin mensaje'}</p>
                     </div>
-                    <div style={{ display: 'flex', gap: 8 }}>
+                    <div className="solicitud-actions">
                       <button className="success" onClick={() => responder(s.id, 'aceptada')}>Aceptar</button>
                       <button className="danger" onClick={() => responder(s.id, 'rechazada')}>Rechazar</button>
                     </div>
@@ -90,7 +87,7 @@ export default function DriverPanel() {
               <div style={{ marginTop: 12 }}>
                 <h4 style={{ margin: '8px 0' }}>Pasajeros confirmados</h4>
                 {aceptadas.map(s => (
-                  <div key={s.id} style={{ padding: 8, background: '#defde0', borderRadius: 6, marginBottom: 6 }}>
+                  <div key={s.id} className="pasajero-ok">
                     ✓ {s.pasajero.nombre} · {s.pasajero.email}
                   </div>
                 ))}

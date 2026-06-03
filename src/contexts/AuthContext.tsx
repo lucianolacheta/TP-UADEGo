@@ -25,16 +25,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => {
-      setSession(data.session)
-      if (data.session?.user) loadUsuario(data.session.user.id).finally(() => setLoading(false))
-      else setLoading(false)
-    })
-
-    const { data: sub } = supabase.auth.onAuthStateChange((_event, sess) => {
+    // Esperar INITIAL_SESSION evita redirigir a /login mientras se procesa el magic link (?code=...)
+    const { data: sub } = supabase.auth.onAuthStateChange((event, sess) => {
       setSession(sess)
       if (sess?.user) loadUsuario(sess.user.id)
       else setUsuario(null)
+
+      if (event === 'INITIAL_SESSION' || event === 'SIGNED_IN' || event === 'SIGNED_OUT') {
+        setLoading(false)
+      }
     })
 
     return () => sub.subscription.unsubscribe()
@@ -48,6 +47,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       email,
       options: { emailRedirectTo: window.location.origin }
     })
+    if (error?.message?.includes('rate limit')) {
+      return { error: 'Enviaste muchos links seguidos. Esperá unos minutos o usá el último mail que te llegó.' }
+    }
     return { error: error?.message ?? null }
   }
 
