@@ -39,6 +39,7 @@ create table public.viajes (
   cupos int not null check (cupos > 0 and cupos <= 6),
   cupos_disponibles int not null check (cupos_disponibles >= 0),
   costo_estimado numeric(10,2) not null default 0,
+  punto_encuentro text not null,
   notas text,
   estado text not null default 'publicado'
     check (estado in ('publicado','confirmado','finalizado','cancelado')),

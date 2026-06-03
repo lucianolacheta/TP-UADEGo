@@ -15,6 +15,7 @@ App de carpool universitario para la comunidad UADE. TP Final - Seminario de Int
 1. Ir a https://supabase.com y crear un proyecto nuevo (free tier).
 2. En **SQL Editor** crear una nueva query y pegar el contenido de `supabase/schema.sql`. Ejecutar.
 3. Crear otra query y pegar `supabase/policies.sql`. Ejecutar.
+3b. Si actualizás desde una versión anterior del schema, ejecutar también `supabase/migration_punto_encuentro.sql`.
 4. En **Authentication > Providers** asegurarse de que **Email** esté habilitado (Magic Link).
 5. En **Authentication > URL Configuration** agregar `http://localhost:5173` como Redirect URL.
 6. En **Project Settings > API** copiar `Project URL` y `anon public key`.

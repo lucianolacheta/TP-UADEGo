@@ -27,6 +27,7 @@ export type Viaje = {
   cupos: number
   cupos_disponibles: number
   costo_estimado: number
+  punto_encuentro: string
   notas: string | null
   estado: EstadoViaje
   created_at: string
