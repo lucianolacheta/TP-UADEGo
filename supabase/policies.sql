@@ -54,13 +54,20 @@ create policy "solicitudes_insert_pasajero"
   on public.solicitudes for insert
   with check (auth.uid() = pasajero_id);
 
+-- Solo el conductor puede aceptar/rechazar solicitudes de sus viajes
 drop policy if exists "solicitudes_update_conductor" on public.solicitudes;
 create policy "solicitudes_update_conductor"
   on public.solicitudes for update
   using (
     auth.uid() in (select conductor_id from public.viajes where id = viaje_id)
-    or auth.uid() = pasajero_id
   );
+
+-- El pasajero solo puede cancelar su propia solicitud (no auto-aceptarse)
+drop policy if exists "solicitudes_cancelar_pasajero" on public.solicitudes;
+create policy "solicitudes_cancelar_pasajero"
+  on public.solicitudes for update
+  using (auth.uid() = pasajero_id)
+  with check (estado = 'cancelada');
 
 -- ---------- calificaciones ----------
 drop policy if exists "calificaciones_select_all" on public.calificaciones;

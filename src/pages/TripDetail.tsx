@@ -1,12 +1,17 @@
 import { useEffect, useState } from 'react'
-import { useParams, Link } from 'react-router-dom'
-import { supabase } from '../lib/supabase'
+import { useParams, useNavigate } from 'react-router-dom'
+import { IconArrowLeft, IconCheck } from '@tabler/icons-react'
 import { useAuth } from '../contexts/AuthContext'
 import type { ViajeConConductor, Solicitud } from '../lib/types'
 import { costoPorPersona } from '../lib/viajeUtils'
+import { getViajeConConductor, getSolicitudPropia, insertSolicitud } from '../services/viajesService'
+import DriverAvatar from '../components/ui/DriverAvatar'
+import StatusPill from '../components/ui/StatusPill'
+import MapPlaceholder from '../components/ui/MapPlaceholder'
 
 export default function TripDetail() {
   const { id } = useParams<{ id: string }>()
+  const nav = useNavigate()
   const { usuario } = useAuth()
   const [viaje, setViaje] = useState<ViajeConConductor | null>(null)
   const [solicitudPropia, setSolicitudPropia] = useState<Solicitud | null>(null)
@@ -23,104 +28,166 @@ export default function TripDetail() {
   async function cargar() {
     if (!id || !usuario) return
     setLoading(true)
-    const { data: v } = await supabase
-      .from('viajes')
-      .select('*, conductor:usuarios!viajes_conductor_id_fkey(id,nombre,rating,validado_uade)')
-      .eq('id', id)
-      .single()
-    setViaje(v as unknown as ViajeConConductor)
-
-    const { data: s } = await supabase
-      .from('solicitudes')
-      .select('*')
-      .eq('viaje_id', id)
-      .eq('pasajero_id', usuario.id)
-      .maybeSingle()
-    setSolicitudPropia(s as Solicitud | null)
-    setLoading(false)
+    try {
+      const [v, s] = await Promise.all([
+        getViajeConConductor(id),
+        getSolicitudPropia(id, usuario.id),
+      ])
+      setViaje(v)
+      setSolicitudPropia(s)
+    } catch {
+      setError('No se pudo cargar el viaje. Intentá de nuevo.')
+    } finally {
+      setLoading(false)
+    }
   }
 
   async function solicitar() {
     if (!viaje || !usuario) return
     setEnviando(true); setError(null)
-    const { error } = await supabase.from('solicitudes').insert({
-      viaje_id: viaje.id,
-      pasajero_id: usuario.id,
-      mensaje: mensaje || null,
-      estado: 'pendiente',
-    })
-    setEnviando(false)
-    if (error) setError(error.message)
-    else await cargar()
+    try {
+      await insertSolicitud(viaje.id, usuario.id, mensaje || null)
+      nav('/confirmacion', { state: { viaje, conductor: viaje.conductor } })
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : 'No se pudo enviar la solicitud.')
+    } finally {
+      setEnviando(false)
+    }
   }
 
-  if (loading) return <p className="muted">Cargando...</p>
-  if (!viaje) return <p>Viaje no encontrado. <Link to="/">Volver</Link></p>
+  if (loading) return (
+    <div className="screen" style={{ padding: '80px 20px' }}>
+      <div className="skeleton skeleton-line" style={{ height: 160, marginBottom: 16 }} />
+      <div className="skeleton skeleton-line medium" />
+      <div className="skeleton skeleton-line short" style={{ marginTop: 8 }} />
+    </div>
+  )
+
+  if (!viaje) return (
+    <div className="screen" style={{ alignItems: 'center', justifyContent: 'center', padding: 32, textAlign: 'center' }}>
+      <div style={{ fontSize: 40, marginBottom: 12 }}>😕</div>
+      <p style={{ marginBottom: 16 }}>Viaje no encontrado.</p>
+      <button className="btn btn-outline btn-sm" onClick={() => nav('/')}>Volver al inicio</button>
+    </div>
+  )
 
   const esElConductor = usuario?.id === viaje.conductor_id
   const sinCupos = viaje.cupos_disponibles === 0
-  const encuentro = viaje.punto_encuentro ?? viaje.notas ?? 'A coordinar'
   const porPersona = costoPorPersona(viaje.costo_estimado, viaje.cupos)
 
   return (
-    <div>
-      <Link to="/" className="back-link">← Volver</Link>
-      <div className="card">
-        <div className="card-header">
-          <h2 style={{ margin: 0 }}>{viaje.origen} → {viaje.destino}</h2>
-          <span className={`badge badge-${viaje.estado}`}>{viaje.estado}</span>
-        </div>
-
-        <div style={{ marginTop: 16 }}>
-          <p><strong>Fecha:</strong> {viaje.fecha}</p>
-          <p><strong>Horario:</strong> {viaje.horario.slice(0, 5)} hs</p>
-          <p><strong>Cupos:</strong> {viaje.cupos_disponibles} de {viaje.cupos} disponibles</p>
-          <p><strong>Costo por persona:</strong> ${porPersona} <span className="muted">(total ${viaje.costo_estimado})</span></p>
-          <p><strong>Punto de encuentro:</strong> {encuentro}</p>
-          {viaje.notas && viaje.punto_encuentro && <p><strong>Notas:</strong> {viaje.notas}</p>}
-          <p className="muted">Conductor: {viaje.conductor?.nombre} {viaje.conductor?.validado_uade && '· ✓ UADE'}</p>
-        </div>
+    <div className="screen">
+      <div className="screen-header">
+        <button className="back-btn" onClick={() => nav(-1)}><IconArrowLeft size={18} /></button>
+        <div className="header-title">Detalle del viaje</div>
       </div>
 
-      {esElConductor && (
-        <div className="card">
-          <p>Sos el conductor de este viaje.</p>
-          <Link to="/mis-viajes"><button>Ver solicitudes</button></Link>
+      <div style={{ flex: 1, padding: '0 20px 120px' }}>
+        {/* Card conductor */}
+        <div className="card" style={{ marginBottom: 14 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 14 }}>
+            {viaje.conductor && (
+              <DriverAvatar nombre={viaje.conductor.nombre} size={52} validadoUade={viaje.conductor.validado_uade} />
+            )}
+            <div style={{ flex: 1 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+                <div style={{ fontSize: 17, fontWeight: 700, color: 'var(--text)' }}>{viaje.conductor?.nombre}</div>
+                {viaje.conductor?.validado_uade && <div className="verified"><IconCheck size={11} /> UADE</div>}
+              </div>
+              {viaje.conductor && viaje.conductor.rating > 0 && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <span className="stars">{'★'.repeat(Math.round(viaje.conductor.rating))}</span>
+                  <span style={{ fontSize: 13, color: 'var(--text2)' }}>{viaje.conductor.rating.toFixed(1)}</span>
+                </div>
+              )}
+            </div>
+            <StatusPill estado={viaje.estado} />
+          </div>
+          <div className="divider" />
+          <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)' }}>
+            {viaje.origen} → {viaje.destino}
+          </div>
         </div>
-      )}
 
-      {!esElConductor && !solicitudPropia && !sinCupos && (
-        <div className="card">
-          <h3 style={{ marginTop: 0 }}>Solicitar lugar</h3>
-          <label className="label">Mensaje al conductor (opcional)</label>
-          <textarea
-            rows={2}
-            value={mensaje}
-            onChange={e => setMensaje(e.target.value)}
-            placeholder="Hola! Salgo cerca de..."
-          />
-          <button onClick={solicitar} disabled={enviando} className="field-spaced">
-            {enviando ? 'Enviando...' : 'Solicitar lugar'}
-          </button>
-          {error && <p style={{ color: 'var(--danger)' }}>{error}</p>}
-        </div>
-      )}
+        {/* Mapa */}
+        <MapPlaceholder origen={viaje.origen} destino="UADE Lima 717" duracion="~25 min" />
 
-      {!esElConductor && solicitudPropia && (
-        <div className="card">
-          <p>Tu solicitud está: <span className={`badge badge-${solicitudPropia.estado}`}>{solicitudPropia.estado}</span></p>
-          {solicitudPropia.estado === 'aceptada' && (
-            <>
-              <p style={{ color: 'var(--success)' }}>¡Viaje confirmado!</p>
-              <p><strong>Encontrate en:</strong> {encuentro}</p>
-              <p><strong>Aportá aprox.:</strong> ${porPersona}</p>
-            </>
+        {/* Detalles del viaje */}
+        <div className="card" style={{ marginBottom: 14 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 12 }}>
+            <span style={{ fontSize: 13, color: 'var(--text2)' }}>Fecha</span>
+            <span style={{ fontSize: 15, fontWeight: 700 }}>{viaje.fecha}</span>
+          </div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 12 }}>
+            <span style={{ fontSize: 13, color: 'var(--text2)' }}>Salida</span>
+            <span style={{ fontSize: 15, fontWeight: 700 }}>{viaje.horario.slice(0, 5)} hs</span>
+          </div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 12 }}>
+            <span style={{ fontSize: 13, color: 'var(--text2)' }}>Punto de encuentro</span>
+            <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--blue)' }}>{viaje.punto_encuentro}</span>
+          </div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 12 }}>
+            <span style={{ fontSize: 13, color: 'var(--text2)' }}>Asientos disponibles</span>
+            <span style={{ fontSize: 14, fontWeight: 700 }}>{viaje.cupos_disponibles} de {viaje.cupos}</span>
+          </div>
+          {viaje.notas && (
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 12 }}>
+              <span style={{ fontSize: 13, color: 'var(--text2)' }}>Notas</span>
+              <span style={{ fontSize: 13, color: 'var(--text)', maxWidth: '60%', textAlign: 'right' }}>{viaje.notas}</span>
+            </div>
           )}
+          <div className="divider" style={{ margin: '8px 0' }} />
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <span style={{ fontSize: 14, color: 'var(--text2)' }}>Precio por asiento</span>
+            <span style={{ fontSize: 22, fontWeight: 800, color: 'var(--green)' }}>${porPersona}</span>
+          </div>
+        </div>
+
+        {solicitudPropia && (
+          <div className="card">
+            <p style={{ fontSize: 14, color: 'var(--text2)' }}>Tu solicitud está: <StatusPill estado={solicitudPropia.estado} /></p>
+            {solicitudPropia.estado === 'aceptada' && (
+              <>
+                <p style={{ color: 'var(--green)', fontWeight: 700, marginTop: 8 }}>¡Viaje confirmado! 🎉</p>
+                <p style={{ fontSize: 14, marginTop: 4 }}><strong>Encontrate en:</strong> {viaje.punto_encuentro}</p>
+                <p style={{ fontSize: 14, marginTop: 4 }}><strong>Aportá aprox.:</strong> ${porPersona}</p>
+              </>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* CTA sticky */}
+      {!esElConductor && !solicitudPropia && !sinCupos && (
+        <div className="sticky-cta">
+          <div style={{ marginBottom: 8 }}>
+            <label className="input-label">Mensaje al conductor (opcional)</label>
+            <textarea
+              className="input-field"
+              rows={2}
+              value={mensaje}
+              onChange={e => setMensaje(e.target.value)}
+              placeholder="Hola! Salgo cerca de..."
+              style={{ resize: 'none' }}
+            />
+          </div>
+          {error && <p style={{ color: 'var(--danger)', fontSize: 13, marginBottom: 8 }}>{error}</p>}
+          <button className="btn btn-orange" onClick={solicitar} disabled={enviando}>
+            {enviando ? 'Enviando...' : `Solicitar asiento — $${porPersona}`}
+          </button>
+        </div>
+      )}
+
+      {esElConductor && (
+        <div className="sticky-cta">
+          <button className="btn btn-primary" onClick={() => nav('/mis-viajes')}>Ver solicitudes de este viaje</button>
         </div>
       )}
 
       {sinCupos && !solicitudPropia && !esElConductor && (
-        <div className="card"><p>Este viaje ya no tiene cupos disponibles.</p></div>
+        <div className="sticky-cta">
+          <p style={{ textAlign: 'center', color: 'var(--text2)', fontSize: 14 }}>Este viaje ya no tiene cupos disponibles.</p>
+        </div>
       )}
     </div>
   )
