@@ -1,26 +1,40 @@
 import { useState } from 'react'
-import { Navigate } from 'react-router-dom'
+import { Navigate, useSearchParams } from 'react-router-dom'
 import { IconMail, IconCheck, IconCar } from '@tabler/icons-react'
 import { useAuth } from '../contexts/AuthContext'
 
 export default function Login() {
-  const { session, loading, signInConEmail } = useAuth()
+  const { session, loading, signInConEmail, signInConPassword } = useAuth()
+  const [searchParams] = useSearchParams()
+  const [modo, setModo] = useState<'magic' | 'password'>('magic')
   const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
   const [enviado, setEnviado] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [cargando, setCargando] = useState(false)
 
   const emailValido = email.endsWith('@uade.edu.ar')
+  const procesandoLink = loading || searchParams.has('code')
 
-  if (!loading && session) return <Navigate to="/" replace />
+  if (procesandoLink) {
+    return (
+      <div className="screen" style={{ alignItems: 'center', justifyContent: 'center' }}>
+        <p style={{ color: 'var(--text2)' }}>Completando acceso...</p>
+      </div>
+    )
+  }
+
+  if (session) return <Navigate to="/" replace />
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     setCargando(true); setError(null)
-    const { error: err } = await signInConEmail(email)
+    const { error: err } = modo === 'magic'
+      ? await signInConEmail(email)
+      : await signInConPassword(email, password)
     setCargando(false)
     if (err) { setError(err); return }
-    setEnviado(true)
+    if (modo === 'magic') setEnviado(true)
   }
 
   if (enviado) {
@@ -76,23 +90,52 @@ export default function Login() {
             </div>
           </div>
 
+          {modo === 'password' && (
+            <div className="input-group" style={{ marginTop: 12 }}>
+              <label className="input-label">Contraseña</label>
+              <input
+                className="input-field"
+                type="password"
+                placeholder="La que configuraste en Supabase"
+                value={password}
+                onChange={e => setPassword(e.target.value)}
+                autoComplete="current-password"
+              />
+            </div>
+          )}
+
           {error && <p style={{ color: 'var(--danger)', fontSize: 14, marginBottom: 12 }}>{error}</p>}
 
-          <button className="btn btn-primary" type="submit" disabled={cargando || !emailValido}>
-            {cargando ? 'Enviando link...' : 'Recibir link de acceso →'}
+          <button className="btn btn-primary" type="submit" disabled={cargando || !emailValido || (modo === 'password' && !password)}>
+            {cargando
+              ? (modo === 'magic' ? 'Enviando link...' : 'Entrando...')
+              : (modo === 'magic' ? 'Recibir link de acceso →' : 'Entrar →')}
+          </button>
+
+          <button
+            type="button"
+            className="btn btn-outline"
+            style={{ marginTop: 10 }}
+            onClick={() => { setModo(m => m === 'magic' ? 'password' : 'magic'); setError(null) }}
+          >
+            {modo === 'magic' ? 'Entrar con contraseña (dev)' : 'Usar magic link'}
           </button>
 
           <div style={{ textAlign: 'center', marginTop: 16, fontSize: 14, color: 'var(--text2)' }}>
-            ¿Primera vez? El link también crea tu cuenta automáticamente.
+            {modo === 'magic'
+              ? '¿Primera vez? El link también crea tu cuenta automáticamente.'
+              : 'Sin mails: creá el usuario en Supabase Dashboard con contraseña.'}
           </div>
         </form>
 
+        {modo === 'magic' && (
         <div style={{ marginTop: 32, background: 'var(--bg)', borderRadius: 'var(--radius-sm)', padding: 14, display: 'flex', gap: 10 }}>
           <span style={{ fontSize: 16, flexShrink: 0 }}>ℹ️</span>
           <div style={{ fontSize: 13, color: 'var(--text2)', lineHeight: 1.5 }}>
-            Usamos magic link: te enviamos un correo con un botón para entrar directo, sin contraseña.
+            Cuando llegue el mail, abrí el link en <strong>el mismo navegador</strong> (Chrome/Safari). Si usás el visor del mail, puede fallar.
           </div>
         </div>
+        )}
       </div>
     </div>
   )

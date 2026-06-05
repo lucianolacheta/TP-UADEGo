@@ -8,6 +8,7 @@ interface AuthContextValue {
   usuario: Usuario | null
   loading: boolean
   signInConEmail: (email: string) => Promise<{ error: string | null }>
+  signInConPassword: (email: string, password: string) => Promise<{ error: string | null }>
   signOut: () => Promise<void>
   refreshUsuario: () => Promise<void>
 }
@@ -25,8 +26,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   useEffect(() => {
-    // Esperar INITIAL_SESSION evita redirigir a /login mientras se procesa el magic link (?code=...)
+    let mounted = true
+
     const { data: sub } = supabase.auth.onAuthStateChange((event, sess) => {
+      if (!mounted) return
       setSession(sess)
       if (sess?.user) loadUsuario(sess.user.id)
       else setUsuario(null)
@@ -36,20 +39,43 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     })
 
-    return () => sub.subscription.unsubscribe()
+    // getSession procesa ?code= del magic link (PKCE)
+    supabase.auth.getSession().then(({ data: { session: s } }) => {
+      if (!mounted) return
+      setSession(s)
+      if (s?.user) {
+        loadUsuario(s.user.id).finally(() => { if (mounted) setLoading(false) })
+      } else if (!window.location.search.includes('code=')) {
+        setLoading(false)
+      }
+    })
+
+    return () => {
+      mounted = false
+      sub.subscription.unsubscribe()
+    }
   }, [])
 
   async function signInConEmail(email: string) {
     if (!email.endsWith('@uade.edu.ar')) {
       return { error: 'Tenés que usar tu email @uade.edu.ar' }
     }
+    const redirectTo = `${window.location.origin}/auth/callback`
     const { error } = await supabase.auth.signInWithOtp({
       email,
-      options: { emailRedirectTo: window.location.origin }
+      options: { emailRedirectTo: redirectTo },
     })
     if (error?.message?.includes('rate limit')) {
       return { error: 'Enviaste muchos links seguidos. Esperá unos minutos o usá el último mail que te llegó.' }
     }
+    return { error: error?.message ?? null }
+  }
+
+  async function signInConPassword(email: string, password: string) {
+    if (!email.endsWith('@uade.edu.ar')) {
+      return { error: 'Tenés que usar tu email @uade.edu.ar' }
+    }
+    const { error } = await supabase.auth.signInWithPassword({ email, password })
     return { error: error?.message ?? null }
   }
 
@@ -62,7 +88,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   return (
-    <AuthContext.Provider value={{ session, usuario, loading, signInConEmail, signOut, refreshUsuario }}>
+    <AuthContext.Provider value={{ session, usuario, loading, signInConEmail, signInConPassword, signOut, refreshUsuario }}>
       {children}
     </AuthContext.Provider>
   )

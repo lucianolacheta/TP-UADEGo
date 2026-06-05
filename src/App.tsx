@@ -3,6 +3,7 @@ import { useAuth } from './contexts/AuthContext'
 import Layout from './components/Layout'
 
 // Auth / Onboarding
+import AuthCallback from './pages/AuthCallback'
 import Splash from './pages/Splash'
 import Login from './pages/Login'
 import VerifyEmail from './pages/VerifyEmail'
@@ -45,6 +46,7 @@ export default function App() {
       {/* Públicas */}
       <Route path="/splash" element={<Splash />} />
       <Route path="/login" element={<Login />} />
+      <Route path="/auth/callback" element={<AuthCallback />} />
       <Route path="/registro" element={<Navigate to="/login" replace />} />
       <Route path="/verificar-email" element={<VerifyEmail />} />
       <Route path="/bienvenida" element={<Welcome />} />
