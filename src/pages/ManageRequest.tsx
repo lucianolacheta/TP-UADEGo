@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom'
 import { IconArrowLeft, IconSchool } from '@tabler/icons-react'
 import { supabase } from '../lib/supabase'
 import type { SolicitudConPasajero } from '../lib/types'
-import { updateEstadoSolicitud } from '../services/viajesService'
+import { updateEstadoSolicitud, actualizarPuntoEncuentro } from '../services/viajesService'
 import DriverAvatar from '../components/ui/DriverAvatar'
 
 export default function ManageRequest() {
@@ -13,6 +13,7 @@ export default function ManageRequest() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [procesando, setProcesando] = useState(false)
+  const [puntoEncuentro, setPuntoEncuentro] = useState('')
 
   useEffect(() => {
     if (!id) return
@@ -29,9 +30,16 @@ export default function ManageRequest() {
   }, [id])
 
   async function responder(estado: 'aceptada' | 'rechazada') {
-    if (!id) return
+    if (!id || !sol) return
+    if (estado === 'aceptada' && puntoEncuentro.trim().length < 3) {
+      setError('Indicá el punto de encuentro antes de aceptar.')
+      return
+    }
     setProcesando(true)
     try {
+      if (estado === 'aceptada') {
+        await actualizarPuntoEncuentro(sol.viaje_id, puntoEncuentro.trim())
+      }
       await updateEstadoSolicitud(id, estado)
       nav(-1)
     } catch { setError('No se pudo actualizar.') }
@@ -94,14 +102,25 @@ export default function ManageRequest() {
           </div>
         )}
 
-        {error && <p style={{ color: 'var(--danger)', fontSize: 14 }}>{error}</p>}
       </div>
 
-      <div className="sticky-cta" style={{ display: 'flex', gap: 10 }}>
-        <button className="btn btn-outline" style={{ flex: 1 }} onClick={() => responder('rechazada')} disabled={procesando}>Rechazar</button>
-        <button className="btn btn-green" style={{ flex: 1 }} onClick={() => responder('aceptada')} disabled={procesando}>
-          {procesando ? 'Procesando...' : 'Aceptar →'}
-        </button>
+      <div className="sticky-cta">
+        <div className="input-group" style={{ marginBottom: 10 }}>
+          <label className="input-label">Punto de encuentro (requerido para aceptar)</label>
+          <input
+            className="input-field"
+            value={puntoEncuentro}
+            onChange={e => setPuntoEncuentro(e.target.value)}
+            placeholder="Ej: Santa Fe y Coronel Díaz"
+          />
+        </div>
+        {error && <p style={{ color: 'var(--danger)', fontSize: 13, marginBottom: 8 }}>{error}</p>}
+        <div style={{ display: 'flex', gap: 10 }}>
+          <button className="btn btn-outline" style={{ flex: 1 }} onClick={() => responder('rechazada')} disabled={procesando}>Rechazar</button>
+          <button className="btn btn-green" style={{ flex: 1 }} onClick={() => responder('aceptada')} disabled={procesando}>
+            {procesando ? 'Procesando...' : 'Aceptar →'}
+          </button>
+        </div>
       </div>
     </div>
   )

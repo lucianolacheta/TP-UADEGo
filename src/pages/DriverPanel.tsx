@@ -72,7 +72,10 @@ export default function DriverPanel() {
           return (
             <div key={v.id} className="card">
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-                <strong style={{ fontSize: 15 }}>{v.origen} → {v.destino}</strong>
+                <strong
+                style={{ fontSize: 15, cursor: 'pointer', color: 'var(--blue)' }}
+                onClick={() => nav(`/viaje/${v.id}`)}
+              >{v.origen} → {v.destino}</strong>
                 <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
                   <StatusPill estado={v.estado} />
                   {(v.estado === 'publicado' || v.estado === 'confirmado') && (

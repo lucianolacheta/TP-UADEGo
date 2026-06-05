@@ -81,6 +81,11 @@ export async function cancelarViaje(viajeId: string) {
   if (error) throw error
 }
 
+export async function actualizarPuntoEncuentro(viajeId: string, puntoEncuentro: string) {
+  const { error } = await supabase.from('viajes').update({ punto_encuentro: puntoEncuentro }).eq('id', viajeId)
+  if (error) throw error
+}
+
 export async function getSolicitudesDePasajero(pasajeroId: string): Promise<(Solicitud & { viaje: Viaje })[]> {
   const { data, error } = await supabase
     .from('solicitudes')

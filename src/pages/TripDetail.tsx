@@ -124,7 +124,9 @@ export default function TripDetail() {
           </div>
           <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 12 }}>
             <span style={{ fontSize: 13, color: 'var(--text2)' }}>Punto de encuentro</span>
-            <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--blue)' }}>{viaje.punto_encuentro}</span>
+            <span style={{ fontSize: 14, fontWeight: 600, color: viaje.punto_encuentro ? 'var(--blue)' : 'var(--text3)' }}>
+              {viaje.punto_encuentro || 'A confirmar'}
+            </span>
           </div>
           <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 12 }}>
             <span style={{ fontSize: 13, color: 'var(--text2)' }}>Asientos disponibles</span>

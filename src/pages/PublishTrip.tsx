@@ -19,7 +19,6 @@ export default function PublishTrip() {
     horario: '',
     cupos: 3,
     costo_estimado: 850,
-    punto_encuentro: '',
     notas: '',
   })
   const [guardando, setGuardando] = useState(false)
@@ -35,7 +34,6 @@ export default function PublishTrip() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     if (form.origen.trim().length < 3) { setError('Escribí la zona de origen (mínimo 3 caracteres).'); return }
-    if (form.punto_encuentro.trim().length < 5) { setError('Describí el punto de encuentro con más detalle.'); return }
     if (form.fecha < new Date().toISOString().split('T')[0]) { setError('La fecha del viaje no puede ser en el pasado.'); return }
     if (!usuario) return
     setGuardando(true); setError(null)
@@ -48,7 +46,7 @@ export default function PublishTrip() {
       cupos: form.cupos,
       cupos_disponibles: form.cupos,
       costo_estimado: form.costo_estimado,
-      punto_encuentro: form.punto_encuentro.trim(),
+      punto_encuentro: '',
       notas: form.notas || null,
       estado: 'publicado',
     }).select('id').single()
@@ -131,17 +129,6 @@ export default function PublishTrip() {
           <div style={{ fontSize: 12, color: 'var(--green)', marginTop: 6 }}>
             💡 ${porPersona} por persona · Cubrís nafta y peaje
           </div>
-        </div>
-
-        <div className="input-group">
-          <label className="input-label">Punto de encuentro</label>
-          <PlacesInput
-            className="input-field"
-            value={form.punto_encuentro}
-            onChange={v => set('punto_encuentro', v)}
-            placeholder="Ej: Santa Fe y Coronel Díaz"
-            required
-          />
         </div>
 
         <div className="input-group">
