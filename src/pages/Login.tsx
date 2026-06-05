@@ -1,11 +1,10 @@
-import { useState, useEffect } from 'react'
-import { useNavigate, Navigate, Link } from 'react-router-dom'
+import { useState } from 'react'
+import { Navigate } from 'react-router-dom'
 import { IconMail, IconCheck, IconCar } from '@tabler/icons-react'
 import { useAuth } from '../contexts/AuthContext'
 
 export default function Login() {
   const { session, loading, signInConEmail } = useAuth()
-  const nav = useNavigate()
   const [email, setEmail] = useState('')
   const [enviado, setEnviado] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -84,8 +83,7 @@ export default function Login() {
           </button>
 
           <div style={{ textAlign: 'center', marginTop: 16, fontSize: 14, color: 'var(--text2)' }}>
-            ¿Primera vez?{' '}
-            <Link to="/registro" style={{ color: 'var(--blue)', fontWeight: 700 }}>Crear cuenta</Link>
+            ¿Primera vez? El link también crea tu cuenta automáticamente.
           </div>
         </form>
 

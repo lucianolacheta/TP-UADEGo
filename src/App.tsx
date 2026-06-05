@@ -5,7 +5,6 @@ import Layout from './components/Layout'
 // Auth / Onboarding
 import Splash from './pages/Splash'
 import Login from './pages/Login'
-import Register from './pages/Register'
 import VerifyEmail from './pages/VerifyEmail'
 import Welcome from './pages/Welcome'
 import RoleSelection from './pages/RoleSelection'
@@ -46,7 +45,7 @@ export default function App() {
       {/* Públicas */}
       <Route path="/splash" element={<Splash />} />
       <Route path="/login" element={<Login />} />
-      <Route path="/registro" element={<Register />} />
+      <Route path="/registro" element={<Navigate to="/login" replace />} />
       <Route path="/verificar-email" element={<VerifyEmail />} />
       <Route path="/bienvenida" element={<Welcome />} />
 
