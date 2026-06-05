@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import type { Viaje, SolicitudConPasajero } from '../lib/types'
-import { getViajesDeConductor, getSolicitudesDeViajes, updateEstadoSolicitud } from '../services/viajesService'
+import { getViajesDeConductor, getSolicitudesDeViajes, updateEstadoSolicitud, cancelarViaje } from '../services/viajesService'
 import StatusPill from '../components/ui/StatusPill'
 import DriverAvatar from '../components/ui/DriverAvatar'
 import EmptyState from '../components/ui/EmptyState'
@@ -41,6 +41,12 @@ export default function DriverPanel() {
     catch { setError('No se pudo actualizar la solicitud. Intentá de nuevo.') }
   }
 
+  async function cancelar(viajeId: string) {
+    if (!confirm('¿Cancelar este viaje? Los pasajeros aceptados verán el estado actualizado.')) return
+    try { await cancelarViaje(viajeId); await cargar() }
+    catch { setError('No se pudo cancelar el viaje. Intentá de nuevo.') }
+  }
+
   if (loading) return (
     <div className="screen" style={{ padding: '80px 20px' }}>
       {[1, 2].map(i => <div key={i} className="skeleton skeleton-line" style={{ height: 100, marginBottom: 12 }} />)}
@@ -67,7 +73,18 @@ export default function DriverPanel() {
             <div key={v.id} className="card">
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
                 <strong style={{ fontSize: 15 }}>{v.origen} → {v.destino}</strong>
-                <StatusPill estado={v.estado} />
+                <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                  <StatusPill estado={v.estado} />
+                  {(v.estado === 'publicado' || v.estado === 'confirmado') && (
+                    <button
+                      className="btn btn-outline btn-sm"
+                      style={{ color: 'var(--danger)', borderColor: 'var(--danger)', padding: '4px 10px', fontSize: 12 }}
+                      onClick={() => cancelar(v.id)}
+                    >
+                      Cancelar
+                    </button>
+                  )}
+                </div>
               </div>
               <p className="muted" style={{ fontSize: 13, marginBottom: 8 }}>
                 {v.fecha} · {v.horario.slice(0, 5)} · {v.cupos_disponibles}/{v.cupos} cupos · ${v.costo_estimado}

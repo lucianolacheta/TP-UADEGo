@@ -3,9 +3,11 @@ import BottomNav from './ui/BottomNav'
 
 export default function Layout() {
   return (
-    <>
-      <Outlet />
+    <div className="layout">
+      <div className="layout-content">
+        <Outlet />
+      </div>
       <BottomNav />
-    </>
+    </div>
   )
 }

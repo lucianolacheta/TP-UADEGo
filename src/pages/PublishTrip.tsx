@@ -5,8 +5,9 @@ import { supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
 import { costoPorPersona } from '../lib/viajeUtils'
 import SeatSelector from '../components/ui/SeatSelector'
+import PlacesInput from '../components/ui/PlacesInput'
 
-const SEDES = ['UADE Monserrat', 'UADE San Justo'] as const
+const SEDES = ['UADE Monserrat', 'UADE Recoleta', 'UADE Belgrano'] as const
 
 export default function PublishTrip() {
   const { usuario } = useAuth()
@@ -53,7 +54,7 @@ export default function PublishTrip() {
     }).select('id').single()
     setGuardando(false)
     if (err) { setError(err.message); return }
-    nav(`/viaje/${data.id}`)
+    nav('/mis-viajes')
   }
 
   return (
@@ -70,10 +71,10 @@ export default function PublishTrip() {
             <div style={{ fontSize: 11, color: 'var(--text3)', marginBottom: 4 }}>Salida desde</div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
               <div style={{ width: 10, height: 10, background: 'var(--blue)', borderRadius: '50%', flexShrink: 0 }} />
-              <input
-                style={{ border: 'none', outline: 'none', fontSize: 15, fontWeight: 600, fontFamily: 'var(--font)', color: 'var(--text)', flex: 1 }}
+              <PlacesInput
+                style={{ border: 'none', outline: 'none', fontSize: 15, fontWeight: 600, fontFamily: 'var(--font)', color: 'var(--text)', flex: 1, background: 'transparent' }}
                 value={form.origen}
-                onChange={e => set('origen', e.target.value)}
+                onChange={v => set('origen', v)}
                 placeholder="Ej: Palermo, Buenos Aires"
                 required
               />
@@ -134,10 +135,10 @@ export default function PublishTrip() {
 
         <div className="input-group">
           <label className="input-label">Punto de encuentro</label>
-          <input
+          <PlacesInput
             className="input-field"
             value={form.punto_encuentro}
-            onChange={e => set('punto_encuentro', e.target.value)}
+            onChange={v => set('punto_encuentro', v)}
             placeholder="Ej: Santa Fe y Coronel Díaz"
             required
           />

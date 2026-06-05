@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { IconArrowLeft, IconCurrentLocation } from '@tabler/icons-react'
 import SeatSelector from '../components/ui/SeatSelector'
+import PlacesInput from '../components/ui/PlacesInput'
 
 export default function Search() {
   const nav = useNavigate()
@@ -17,7 +18,7 @@ export default function Search() {
   return (
     <div className="screen">
       <div className="screen-header">
-        <button className="back-btn" onClick={() => nav(-1)}><IconArrowLeft size={18} /></button>
+        <button className="back-btn" onClick={() => nav('/')}><IconArrowLeft size={18} /></button>
         <div className="header-title">Buscar viaje</div>
       </div>
       <div className="screen-content">
@@ -31,10 +32,10 @@ export default function Search() {
             </div>
             <div style={{ flex: 1 }}>
               <div style={{ fontSize: 12, color: 'var(--text3)', marginBottom: 2 }}>Salida desde</div>
-              <input
-                style={{ border: 'none', outline: 'none', fontSize: 15, fontWeight: 600, fontFamily: 'var(--font)', color: 'var(--text)', width: '100%' }}
+              <PlacesInput
+                style={{ border: 'none', outline: 'none', fontSize: 15, fontWeight: 600, fontFamily: 'var(--font)', color: 'var(--text)', width: '100%', background: 'transparent' }}
                 value={origen}
-                onChange={e => setOrigen(e.target.value)}
+                onChange={setOrigen}
                 placeholder="¿Desde dónde salís?"
               />
             </div>

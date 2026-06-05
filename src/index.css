@@ -124,9 +124,13 @@ html, body, #root {
 .card-tappable { cursor: pointer; transition: all 0.15s; }
 .card-tappable:active { transform: scale(0.99); border-color: var(--blue); }
 
+/* ===== LAYOUT CON NAV FIJO ===== */
+.layout { display: flex; flex-direction: column; height: 100dvh; }
+.layout-content { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; }
+
 /* ===== BOTTOM NAV ===== */
 .bottom-nav {
-  position: sticky; bottom: 0; background: white; border-top: 1.5px solid var(--border);
+  background: white; border-top: 1.5px solid var(--border);
   display: flex; padding: 8px 0 24px; z-index: 50; flex-shrink: 0;
 }
 .nav-item {
@@ -294,6 +298,20 @@ html, body, #root {
   cursor: pointer; border: none; font-family: var(--font);
 }
 
+/* ===== RESPONSIVE DESKTOP ===== */
+@media (min-width: 768px) {
+  body { background: #c8d4e8; display: flex; justify-content: center; }
+  #root {
+    width: 430px;
+    max-width: 430px;
+    height: 100dvh;
+    box-shadow: 0 0 60px rgba(15,33,103,0.18);
+    overflow: hidden;
+    flex-shrink: 0;
+  }
+  .layout { height: 100dvh; }
+}
+
 @keyframes shimmer {
   0% { background-position: -400px 0; }
   100% { background-position: 400px 0; }
@@ -313,3 +331,27 @@ html, body, #root {
 .solicitud-item:last-child { border-bottom: none; }
 .solicitud-actions { display: flex; gap: 8px; flex-shrink: 0; }
 .pasajero-ok { font-size: 14px; color: var(--green); font-weight: 600; padding: 6px 0; }
+
+/* ===== CUSTOM PLACES DROPDOWN ===== */
+.places-dropdown {
+  position: fixed;
+  background: white;
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-sm);
+  box-shadow: 0 8px 24px rgba(15,33,103,0.12);
+  list-style: none;
+  z-index: 9999;
+  overflow: hidden;
+}
+.places-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 11px 14px;
+  cursor: pointer;
+  border-top: 1px solid var(--border);
+}
+.places-item:first-child { border-top: none; }
+.places-item:hover { background: var(--bg); }
+.places-main { font-size: 14px; font-weight: 600; color: var(--text); }
+.places-secondary { font-size: 12px; color: var(--text3); }

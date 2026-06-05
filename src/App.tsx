@@ -21,6 +21,7 @@ import TripDetail from './pages/TripDetail'
 import RequestConfirm from './pages/RequestConfirm'
 import PublishTrip from './pages/PublishTrip'
 import DriverPanel from './pages/DriverPanel'
+import MisSolicitudes from './pages/MisSolicitudes'
 import ManageRequest from './pages/ManageRequest'
 
 // Coordinar
@@ -32,6 +33,12 @@ import TripSummary from './pages/TripSummary'
 
 // Perfil
 import Profile from './pages/Profile'
+
+function MisViajes() {
+  const { usuario } = useAuth()
+  if (usuario?.rol === 'conductor' || usuario?.rol === 'ambos') return <DriverPanel />
+  return <MisSolicitudes />
+}
 
 function Protegida({ children }: { children: JSX.Element }) {
   const { session, loading } = useAuth()
@@ -65,7 +72,7 @@ export default function App() {
         <Route path="/viaje/:id" element={<TripDetail />} />
         <Route path="/confirmacion" element={<RequestConfirm />} />
         <Route path="/publicar" element={<PublishTrip />} />
-        <Route path="/mis-viajes" element={<DriverPanel />} />
+        <Route path="/mis-viajes" element={<MisViajes />} />
         <Route path="/solicitud/:id" element={<ManageRequest />} />
         <Route path="/mensajes" element={<Messages />} />
         <Route path="/chat/:id?" element={<Chat />} />

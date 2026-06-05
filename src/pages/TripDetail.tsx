@@ -4,7 +4,7 @@ import { IconArrowLeft, IconCheck } from '@tabler/icons-react'
 import { useAuth } from '../contexts/AuthContext'
 import type { ViajeConConductor, Solicitud } from '../lib/types'
 import { costoPorPersona } from '../lib/viajeUtils'
-import { getViajeConConductor, getSolicitudPropia, insertSolicitud } from '../services/viajesService'
+import { getViajeConConductor, getSolicitudPropia, insertSolicitud, cancelarSolicitud } from '../services/viajesService'
 import DriverAvatar from '../components/ui/DriverAvatar'
 import StatusPill from '../components/ui/StatusPill'
 import MapPlaceholder from '../components/ui/MapPlaceholder'
@@ -145,13 +145,29 @@ export default function TripDetail() {
 
         {solicitudPropia && (
           <div className="card">
-            <p style={{ fontSize: 14, color: 'var(--text2)' }}>Tu solicitud está: <StatusPill estado={solicitudPropia.estado} /></p>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+              <p style={{ fontSize: 14, color: 'var(--text2)' }}>Tu solicitud:</p>
+              <StatusPill estado={solicitudPropia.estado} />
+            </div>
             {solicitudPropia.estado === 'aceptada' && (
               <>
-                <p style={{ color: 'var(--green)', fontWeight: 700, marginTop: 8 }}>¡Viaje confirmado! 🎉</p>
-                <p style={{ fontSize: 14, marginTop: 4 }}><strong>Encontrate en:</strong> {viaje.punto_encuentro}</p>
+                <p style={{ color: 'var(--green)', fontWeight: 700, marginBottom: 6 }}>¡Viaje confirmado! 🎉</p>
+                <p style={{ fontSize: 14 }}><strong>Encontrate en:</strong> {viaje.punto_encuentro}</p>
                 <p style={{ fontSize: 14, marginTop: 4 }}><strong>Aportá aprox.:</strong> ${porPersona}</p>
               </>
+            )}
+            {(solicitudPropia.estado === 'pendiente' || solicitudPropia.estado === 'aceptada') && (
+              <button
+                className="btn btn-outline btn-sm"
+                style={{ color: 'var(--danger)', borderColor: 'var(--danger)', marginTop: 12 }}
+                onClick={async () => {
+                  if (!confirm('¿Cancelar tu solicitud?')) return
+                  await cancelarSolicitud(solicitudPropia.id)
+                  await cargar()
+                }}
+              >
+                Cancelar solicitud
+              </button>
             )}
           </div>
         )}

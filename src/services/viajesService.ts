@@ -70,3 +70,23 @@ export async function updateEstadoSolicitud(solId: string, estado: 'aceptada' | 
   const { error } = await supabase.from('solicitudes').update({ estado }).eq('id', solId)
   if (error) throw error
 }
+
+export async function cancelarSolicitud(solId: string) {
+  const { error } = await supabase.from('solicitudes').update({ estado: 'cancelada' }).eq('id', solId)
+  if (error) throw error
+}
+
+export async function cancelarViaje(viajeId: string) {
+  const { error } = await supabase.from('viajes').update({ estado: 'cancelado' }).eq('id', viajeId)
+  if (error) throw error
+}
+
+export async function getSolicitudesDePasajero(pasajeroId: string): Promise<(Solicitud & { viaje: Viaje })[]> {
+  const { data, error } = await supabase
+    .from('solicitudes')
+    .select('*, viaje:viajes(*)')
+    .eq('pasajero_id', pasajeroId)
+    .order('fecha_solicitud', { ascending: false })
+  if (error) throw error
+  return (data as unknown as (Solicitud & { viaje: Viaje })[]) ?? []
+}
