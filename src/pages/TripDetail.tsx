@@ -2,9 +2,9 @@ import { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { IconArrowLeft, IconCheck } from '@tabler/icons-react'
 import { useAuth } from '../contexts/AuthContext'
-import type { ViajeConConductor, Solicitud } from '../lib/types'
+import type { ViajeConConductor, Solicitud, SolicitudConPasajero } from '../lib/types'
 import { costoPorPersona } from '../lib/viajeUtils'
-import { getViajeConConductor, getSolicitudPropia, insertSolicitud, cancelarSolicitud } from '../services/viajesService'
+import { getViajeConConductor, getSolicitudPropia, insertSolicitud, cancelarSolicitud, getSolicitudesDeViajes, getViajesDisponibles } from '../services/viajesService'
 import DriverAvatar from '../components/ui/DriverAvatar'
 import StatusPill from '../components/ui/StatusPill'
 import MapPlaceholder from '../components/ui/MapPlaceholder'
@@ -15,10 +15,13 @@ export default function TripDetail() {
   const { usuario } = useAuth()
   const [viaje, setViaje] = useState<ViajeConConductor | null>(null)
   const [solicitudPropia, setSolicitudPropia] = useState<Solicitud | null>(null)
+  const [solicitudesDelViaje, setSolicitudesDelViaje] = useState<SolicitudConPasajero[]>([])
   const [mensaje, setMensaje] = useState('')
   const [enviando, setEnviando] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
+  const [pedirVuelta, setPedirVuelta] = useState(false)
+  const [viajeVuelta, setViajeVuelta] = useState<ViajeConConductor | null>(null)
 
   useEffect(() => {
     if (id && usuario) cargar()
@@ -35,6 +38,21 @@ export default function TripDetail() {
       ])
       setViaje(v)
       setSolicitudPropia(s)
+      if (v && usuario.id === v.conductor_id) {
+        const ss = await getSolicitudesDeViajes([id])
+        setSolicitudesDelViaje(ss)
+      }
+      // Buscar viaje de vuelta: mismo conductor, mismo día, origen = sede del viaje
+      if (v && usuario.id !== v.conductor_id) {
+        const todos = await getViajesDisponibles()
+        const vuelta = todos.find(vv =>
+          vv.conductor_id === v.conductor_id &&
+          vv.fecha === v.fecha &&
+          vv.origen === v.destino &&
+          vv.id !== v.id
+        ) ?? null
+        setViajeVuelta(vuelta)
+      }
     } catch {
       setError('No se pudo cargar el viaje. Intentá de nuevo.')
     } finally {
@@ -47,7 +65,11 @@ export default function TripDetail() {
     setEnviando(true); setError(null)
     try {
       await insertSolicitud(viaje.id, usuario.id, mensaje || null)
-      nav('/confirmacion', { state: { viaje, conductor: viaje.conductor } })
+      // Solicitar vuelta también si el usuario lo eligió
+      if (pedirVuelta && viajeVuelta) {
+        await insertSolicitud(viajeVuelta.id, usuario.id, `Vuelta de ${viaje.destino} a ${viaje.origen}`)
+      }
+      nav('/confirmacion', { state: { viaje, conductor: viaje.conductor, conVuelta: pedirVuelta && !!viajeVuelta } })
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : 'No se pudo enviar la solicitud.')
     } finally {
@@ -56,10 +78,16 @@ export default function TripDetail() {
   }
 
   if (loading) return (
-    <div className="screen" style={{ padding: '80px 20px' }}>
-      <div className="skeleton skeleton-line" style={{ height: 160, marginBottom: 16 }} />
-      <div className="skeleton skeleton-line medium" />
-      <div className="skeleton skeleton-line short" style={{ marginTop: 8 }} />
+    <div className="screen">
+      <div className="screen-header">
+        <button className="back-btn" onClick={() => nav(-1)}><IconArrowLeft size={18} /></button>
+        <div className="header-title" style={{ color: 'var(--text3)' }}>Cargando...</div>
+      </div>
+      <div style={{ padding: '0 20px' }}>
+        <div className="skeleton skeleton-line" style={{ height: 120, marginBottom: 16 }} />
+        <div className="skeleton skeleton-line" style={{ height: 160, marginBottom: 16 }} />
+        <div className="skeleton skeleton-line" style={{ height: 140 }} />
+      </div>
     </div>
   )
 
@@ -176,7 +204,7 @@ export default function TripDetail() {
       </div>
 
       {/* CTA sticky */}
-      {!esElConductor && !solicitudPropia && !sinCupos && (
+      {!esElConductor && (!solicitudPropia || solicitudPropia.estado === 'cancelada' || solicitudPropia.estado === 'rechazada') && !sinCupos && (
         <div className="sticky-cta">
           <div style={{ marginBottom: 8 }}>
             <label className="input-label">Mensaje al conductor (opcional)</label>
@@ -189,6 +217,47 @@ export default function TripDetail() {
               style={{ resize: 'none' }}
             />
           </div>
+
+          {/* Toggle vuelta */}
+          {viajeVuelta && (
+            <div
+              onClick={() => setPedirVuelta(v => !v)}
+              style={{
+                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                padding: '10px 12px', borderRadius: 'var(--radius-xs)', marginBottom: 10, cursor: 'pointer',
+                border: `1.5px solid ${pedirVuelta ? 'var(--blue)' : 'var(--border)'}`,
+                background: pedirVuelta ? 'var(--blue-light)' : 'white',
+              }}
+            >
+              <div>
+                <div style={{ fontSize: 13, fontWeight: 700, color: pedirVuelta ? 'var(--blue)' : 'var(--text)' }}>
+                  🔄 También quiero la vuelta
+                </div>
+                <div style={{ fontSize: 12, color: 'var(--text2)' }}>
+                  {viajeVuelta.origen} → {viajeVuelta.destino} · {viajeVuelta.horario.slice(0, 5)} hs
+                </div>
+              </div>
+              <div style={{
+                width: 40, height: 22, borderRadius: 11,
+                background: pedirVuelta ? 'var(--blue)' : 'var(--border)',
+                position: 'relative', transition: 'background 0.2s',
+              }}>
+                <div style={{
+                  position: 'absolute', top: 2, left: pedirVuelta ? 20 : 2,
+                  width: 18, height: 18, borderRadius: '50%',
+                  background: 'white', transition: 'left 0.2s',
+                  boxShadow: '0 1px 3px rgba(0,0,0,0.2)',
+                }} />
+              </div>
+            </div>
+          )}
+
+          {(solicitudPropia?.estado === 'cancelada' || solicitudPropia?.estado === 'rechazada') && (
+            <p style={{ fontSize: 13, color: 'var(--text2)', marginBottom: 8 }}>
+              {solicitudPropia.estado === 'rechazada' ? 'Tu solicitud fue rechazada.' : 'Cancelaste tu solicitud anterior.'}{' '}
+              Podés volver a solicitar:
+            </p>
+          )}
           {error && <p style={{ color: 'var(--danger)', fontSize: 13, marginBottom: 8 }}>{error}</p>}
           <button className="btn btn-orange" onClick={solicitar} disabled={enviando}>
             {enviando ? 'Enviando...' : `Solicitar asiento — $${porPersona}`}
@@ -196,9 +265,31 @@ export default function TripDetail() {
         </div>
       )}
 
-      {esElConductor && (
-        <div className="sticky-cta">
-          <button className="btn btn-primary" onClick={() => nav('/mis-viajes')}>Ver solicitudes de este viaje</button>
+      {esElConductor && solicitudesDelViaje.length > 0 && (
+        <div className="card" style={{ marginBottom: 0 }}>
+          <div className="section-title">Solicitudes ({solicitudesDelViaje.length})</div>
+          {solicitudesDelViaje.map(s => (
+            <div key={s.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 0', borderBottom: '1px solid var(--border)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <DriverAvatar nombre={s.pasajero.nombre} size={36} />
+                <div>
+                  <div style={{ fontSize: 14, fontWeight: 700 }}>{s.pasajero.nombre}</div>
+                  <div style={{ fontSize: 12, color: 'var(--text2)' }}>{s.mensaje ?? 'Sin mensaje'}</div>
+                </div>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <StatusPill estado={s.estado} />
+                {s.estado === 'pendiente' && (
+                  <button className="btn btn-green btn-sm" onClick={() => nav(`/solicitud/${s.id}`)}>Gestionar</button>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+      {esElConductor && solicitudesDelViaje.length === 0 && (
+        <div className="card" style={{ textAlign: 'center', color: 'var(--text2)', fontSize: 14 }}>
+          Todavía no hay solicitudes para este viaje.
         </div>
       )}
 

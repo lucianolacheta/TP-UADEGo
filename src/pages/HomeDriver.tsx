@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import type { Viaje, SolicitudConPasajero } from '../lib/types'
 import { getViajesDeConductor, getSolicitudesDeViajes, updateEstadoSolicitud } from '../services/viajesService'
+import { costoPorPersona } from '../lib/viajeUtils'
 import StatusPill from '../components/ui/StatusPill'
 import DriverAvatar from '../components/ui/DriverAvatar'
 
@@ -77,14 +78,14 @@ export default function HomeDriver() {
 
         {error && <p style={{ color: 'var(--danger)', fontSize: 14, marginBottom: 12 }}>{error}</p>}
 
+        <div style={{ fontSize: 16, fontWeight: 700, color: 'var(--text)', marginBottom: 10 }}>Solicitudes pendientes</div>
         {loading ? (
           <div>
-            <div className="skeleton skeleton-line" style={{ height: 100, marginBottom: 12 }} />
+            <div className="skeleton skeleton-line" style={{ height: 80, marginBottom: 10 }} />
             <div className="skeleton skeleton-line" style={{ height: 80 }} />
           </div>
         ) : (
           <>
-            <div style={{ fontSize: 16, fontWeight: 700, color: 'var(--text)', marginBottom: 10 }}>Solicitudes pendientes</div>
             {pendientes.length === 0 ? (
               <div className="card" style={{ textAlign: 'center', color: 'var(--text2)', fontSize: 14 }}>No hay solicitudes pendientes.</div>
             ) : pendientes.map(s => (
@@ -106,7 +107,7 @@ export default function HomeDriver() {
               </div>
             ))}
 
-            <div style={{ fontSize: 16, fontWeight: 700, color: 'var(--text)', marginBottom: 10, marginTop: 4 }}>Mis viajes activos</div>
+            <div style={{ fontSize: 16, fontWeight: 700, color: 'var(--text)', marginBottom: 10, marginTop: 16 }}>Mis viajes activos</div>
             {viajesActivos.length === 0 ? (
               <div className="card" style={{ textAlign: 'center', color: 'var(--text2)', fontSize: 14 }}>No tenés viajes activos.</div>
             ) : viajesActivos.map(v => {
@@ -120,7 +121,7 @@ export default function HomeDriver() {
                   </div>
                   <div style={{ fontSize: 13, color: 'var(--text2)', marginBottom: 4 }}>{v.fecha} · {v.horario.slice(0, 5)} hs</div>
                   <div style={{ fontSize: 13, color: 'var(--text2)' }}>
-                    {aceptadas}/{v.cupos} asientos · ${v.costo_estimado * aceptadas} total
+                    {aceptadas}/{v.cupos} asientos · ${costoPorPersona(v.costo_estimado, v.cupos) * aceptadas} recaudado
                   </div>
                 </div>
               )

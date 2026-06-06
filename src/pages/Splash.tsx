@@ -1,8 +1,14 @@
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, Navigate } from 'react-router-dom'
 import { IconCar } from '@tabler/icons-react'
+import { useAuth } from '../contexts/AuthContext'
 
 export default function Splash() {
   const nav = useNavigate()
+  const { session, loading } = useAuth()
+
+  // Si ya hay sesión activa, ir directo al home
+  if (!loading && session) return <Navigate to="/" replace />
+
   return (
     <div className="splash-screen">
       <div style={{ textAlign: 'center', flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
@@ -20,7 +26,7 @@ export default function Splash() {
         </div>
       </div>
       <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: 10 }}>
-        <button className="btn btn-white" onClick={() => nav('/registro')}>Comenzar →</button>
+        <button className="btn btn-white" onClick={() => nav('/login')}>Comenzar →</button>
         <button className="btn btn-ghost" onClick={() => nav('/login')}>Ya tengo cuenta</button>
       </div>
     </div>

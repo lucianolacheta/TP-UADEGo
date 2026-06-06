@@ -28,21 +28,21 @@ export default function ProfileSetup() {
     const { error: err } = await supabase.from('usuarios').update({
       nombre: form.nombre,
       horario_habitual: form.turno,
+      rol: 'ambos',   // todos pueden publicar y buscar viajes
     }).eq('id', usuario.id)
     if (err) { setError(err.message); setGuardando(false); return }
     await refreshUsuario()
     setGuardando(false)
-    const rol = usuario.rol
-    nav(rol === 'conductor' || rol === 'ambos' ? '/datos-conductor' : '/zonas')
+    nav('/zonas')
   }
 
   return (
     <div className="screen">
       <div className="screen-header">
-        <button className="back-btn" onClick={() => nav('/elegir-rol')}><IconArrowLeft size={18} /></button>
+        <button className="back-btn" onClick={() => nav('/login')}><IconArrowLeft size={18} /></button>
         <div>
           <div className="header-title">Tu perfil</div>
-          <div className="header-subtitle">Paso 1 de 2</div>
+          <div className="header-subtitle">Paso 1 de 2 — Datos personales</div>
         </div>
       </div>
 

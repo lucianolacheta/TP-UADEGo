@@ -19,28 +19,79 @@ interface Props {
 
 const API_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY
 
+// ──────────────────────────────────────────────────────────────────────────
+// Carga el SDK de Maps JS (una sola vez, sin duplicar el script)
+// ──────────────────────────────────────────────────────────────────────────
+let sdkLoaded = false
+let sdkError = false
+
+function cargarSDK(): Promise<void> {
+  if (sdkLoaded) return Promise.resolve()
+  if (sdkError) return Promise.reject(new Error('SDK fallido'))
+  if ((window as any).google?.maps?.places) {
+    sdkLoaded = true
+    return Promise.resolve()
+  }
+
+  return new Promise((resolve, reject) => {
+    // Si ya hay un script cargando, esperamos
+    const existing = document.querySelector('script[data-maps-sdk]')
+    if (existing) {
+      existing.addEventListener('load', () => { sdkLoaded = true; resolve() })
+      existing.addEventListener('error', () => { sdkError = true; reject() })
+      return
+    }
+
+    const script = document.createElement('script')
+    script.setAttribute('data-maps-sdk', '1')
+    script.src = `https://maps.googleapis.com/maps/api/js?key=${API_KEY}&libraries=places&language=es`
+    script.async = true
+    script.defer = true
+    script.onload = () => { sdkLoaded = true; resolve() }
+    script.onerror = () => { sdkError = true; reject(new Error('No se pudo cargar Google Maps')) }
+    document.head.appendChild(script)
+  })
+}
+
+// ──────────────────────────────────────────────────────────────────────────
+// Autocomplete usando AutocompleteService (funciona en browser sin CORS)
+// ──────────────────────────────────────────────────────────────────────────
 async function fetchSugerencias(input: string): Promise<Sugerencia[]> {
   if (!API_KEY || input.length < 2) return []
+
   try {
-    const res = await fetch('https://places.googleapis.com/v1/places:autocomplete', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'X-Goog-Api-Key': API_KEY },
-      body: JSON.stringify({ input, includedRegionCodes: ['ar'], languageCode: 'es' }),
+    await cargarSDK()
+    const service = new (window as any).google.maps.places.AutocompleteService()
+    return new Promise((resolve) => {
+      service.getPlacePredictions(
+        {
+          input,
+          componentRestrictions: { country: 'ar' },
+          language: 'es',
+        },
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        (predictions: any[] | null, status: string) => {
+          if (status !== 'OK' || !predictions) { resolve([]); return }
+          resolve(
+            predictions.slice(0, 5).map(p => ({
+              placeId: p.place_id,
+              mainText: p.structured_formatting?.main_text ?? p.description,
+              secondaryText: p.structured_formatting?.secondary_text ?? '',
+              fullText: p.description,
+            }))
+          )
+        }
+      )
     })
-    if (!res.ok) return []
-    const data = await res.json()
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    return (data.suggestions ?? []).slice(0, 5).map((s: any) => ({
-      placeId: s.placePrediction?.placeId ?? Math.random().toString(),
-      mainText: s.placePrediction?.structuredFormat?.mainText?.text ?? '',
-      secondaryText: s.placePrediction?.structuredFormat?.secondaryText?.text ?? '',
-      fullText: s.placePrediction?.text?.text ?? '',
-    }))
-  } catch {
+  } catch (e) {
+    console.warn('[PlacesInput] Error al cargar Google Maps:', e)
     return []
   }
 }
 
+// ──────────────────────────────────────────────────────────────────────────
+// Componente
+// ──────────────────────────────────────────────────────────────────────────
 export default function PlacesInput({ value, onChange, placeholder, required, className, style }: Props) {
   const wrapRef = useRef<HTMLDivElement>(null)
   const [texto, setTexto] = useState(value)
@@ -48,10 +99,15 @@ export default function PlacesInput({ value, onChange, placeholder, required, cl
   const [rect, setRect] = useState<DOMRect | null>(null)
   const debounce = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-  // Sincroniza cambios externos (ej: búsquedas frecuentes, reset)
+  // Sincroniza cambios externos (chips de zona, reset)
   useEffect(() => {
     if (value !== texto) setTexto(value)
   }, [value]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Pre-carga el SDK en cuanto el componente monta (sin esperar el primer tipo)
+  useEffect(() => {
+    if (API_KEY) cargarSDK().catch(() => {})
+  }, [])
 
   function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
     const v = e.target.value
@@ -62,7 +118,8 @@ export default function PlacesInput({ value, onChange, placeholder, required, cl
       const res = await fetchSugerencias(v)
       setSugerencias(res)
       if (res.length > 0 && wrapRef.current) setRect(wrapRef.current.getBoundingClientRect())
-    }, 300)
+      else setRect(null)
+    }, 250)
   }
 
   async function handleFocus() {
@@ -103,7 +160,7 @@ export default function PlacesInput({ value, onChange, placeholder, required, cl
           {sugerencias.map(s => (
             <li key={s.placeId} className="places-item" onMouseDown={() => seleccionar(s.fullText)}>
               <span className="places-main">{s.mainText}</span>
-              <span className="places-secondary">{s.secondaryText}</span>
+              {s.secondaryText && <span className="places-secondary">{s.secondaryText}</span>}
             </li>
           ))}
         </ul>,

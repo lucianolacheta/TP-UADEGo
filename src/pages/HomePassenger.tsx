@@ -39,12 +39,15 @@ export default function HomePassenger() {
       .finally(() => setLoading(false))
   }, [])
 
-  const filtrados = viajes.filter(v => horarioEnFranja(v.horario, filtro))
-  const proxima = viajes[0]?.horario.slice(0, 5) ?? '--:--'
+  // No mostrar viajes propios
+  const ajenos = viajes.filter(v => v.conductor_id !== usuario?.id)
+  const filtrados = ajenos.filter(v => horarioEnFranja(v.horario, filtro))
+  const proxima = ajenos[0]?.horario.slice(0, 5) ?? '--:--'
 
   return (
     <>
       <div style={{ padding: '48px 20px 0', flex: 1 }}>
+        {/* Encabezado */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
           <div>
             <div style={{ fontSize: 14, color: 'var(--text2)' }}>{saludo()},</div>
@@ -63,7 +66,7 @@ export default function HomePassenger() {
         {/* Buscador rápido */}
         <div
           onClick={() => nav('/buscar')}
-          style={{ background: 'linear-gradient(135deg,#0F2167,#1A6FE8)', borderRadius: 'var(--radius)', padding: 20, marginBottom: 16, cursor: 'pointer' }}
+          style={{ background: 'linear-gradient(135deg,#0F2167,#1A6FE8)', borderRadius: 'var(--radius)', padding: 20, marginBottom: 12, cursor: 'pointer' }}
         >
           <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.7)', marginBottom: 8 }}>¿A dónde vas hoy?</div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, background: 'rgba(255,255,255,0.15)', borderRadius: 'var(--radius-sm)', padding: 12, backdropFilter: 'blur(4px)' }}>
@@ -72,7 +75,7 @@ export default function HomePassenger() {
           </div>
           <div style={{ marginTop: 14, display: 'flex', gap: 10 }}>
             <div style={{ background: 'rgba(255,255,255,0.12)', borderRadius: 'var(--radius-xs)', padding: '8px 12px', textAlign: 'center', flex: 1 }}>
-              <div style={{ fontSize: 20, fontWeight: 800, color: 'white' }}>{viajes.length}</div>
+              <div style={{ fontSize: 20, fontWeight: 800, color: 'white' }}>{ajenos.length}</div>
               <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.6)' }}>viajes hoy</div>
             </div>
             <div style={{ background: 'rgba(255,255,255,0.12)', borderRadius: 'var(--radius-xs)', padding: '8px 12px', textAlign: 'center', flex: 1 }}>
@@ -82,7 +85,19 @@ export default function HomePassenger() {
           </div>
         </div>
 
-        {/* Filtros */}
+        {/* Banner publicar */}
+        <div
+          onClick={() => nav('/publicar')}
+          style={{ background: 'linear-gradient(135deg,#FF6B35,#FF8C5A)', borderRadius: 'var(--radius)', padding: '14px 16px', marginBottom: 16, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}
+        >
+          <div>
+            <div style={{ fontSize: 14, fontWeight: 800, color: 'white' }}>¿Vas a UADE? Compartí tu auto</div>
+            <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.8)', marginTop: 2 }}>Publicá un viaje y reducí tus gastos</div>
+          </div>
+          <div style={{ background: 'rgba(255,255,255,0.2)', borderRadius: 8, padding: '6px 12px', fontSize: 13, fontWeight: 700, color: 'white' }}>+ Publicar</div>
+        </div>
+
+        {/* Filtros por turno */}
         <div className="chips-row" style={{ marginBottom: 12 }}>
           {FILTROS.map(f => (
             <button key={f.key} className={`chip ${filtro === f.key ? 'active' : ''}`} onClick={() => setFiltro(f.key)}>
@@ -109,7 +124,7 @@ export default function HomePassenger() {
           <div style={{ textAlign: 'center', padding: '32px 0', color: 'var(--text2)' }}>
             <div style={{ fontSize: 40, marginBottom: 12 }}>🚗</div>
             <div style={{ fontWeight: 700, marginBottom: 6 }}>Sin viajes en este horario</div>
-            <div style={{ fontSize: 13 }}>Probá otro filtro</div>
+            <div style={{ fontSize: 13 }}>Probá otro filtro o buscá por zona</div>
           </div>
         )}
         {filtrados.map(v => <RideCard key={v.id} viaje={v} />)}

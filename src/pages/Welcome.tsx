@@ -16,7 +16,7 @@ export default function Welcome() {
         <IconSchool size={14} /> Estudiante UADE verificado
       </div>
       <div style={{ width: '100%' }}>
-        <button className="btn btn-primary" onClick={() => nav('/elegir-rol')}>Completar mi perfil →</button>
+        <button className="btn btn-primary" onClick={() => nav('/completar-perfil')}>Completar mi perfil →</button>
       </div>
     </div>
   )

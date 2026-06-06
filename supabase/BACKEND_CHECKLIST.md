@@ -226,7 +226,32 @@ where fecha >= current_date and estado = 'publicado' and cupos_disponibles > 0;
 
 ---
 
-## 9. Checklist día demo (08/06)
+## 9. Limpieza de datos de prueba (HACER ANTES DE LA DEMO)
+
+Hay viajes con datos de testing visibles en la app. Correr en SQL Editor:
+
+```sql
+-- Ver viajes con datos de prueba
+select id, origen, destino, punto_encuentro, notas
+from public.viajes
+where punto_encuentro ilike '%ca y sa%'
+   or notas ilike '%ads%'
+   or punto_encuentro = ''
+   or length(punto_encuentro) < 5;
+
+-- Actualizar o borrar según corresponda:
+-- Opción A: corregir el punto de encuentro
+update public.viajes
+set punto_encuentro = 'Av. Corrientes y Pueyrredón', notas = null
+where id = 'ID_DEL_VIAJE';
+
+-- Opción B: borrar el viaje de prueba
+delete from public.viajes where id = 'ID_DEL_VIAJE';
+```
+
+---
+
+## 10. Checklist día demo (08/06)
 
 - [ ] Proyecto Supabase activo (no pausado por inactividad)
 - [ ] Al menos 2 usuarios `@uade.edu.ar` creados

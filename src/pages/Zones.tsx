@@ -40,7 +40,14 @@ export default function Zones() {
     <div className="screen">
       <div className="screen-header">
         <button className="back-btn" onClick={() => nav(-1)}><IconArrowLeft size={18} /></button>
-        <div className="header-title">Zonas habituales</div>
+        <div>
+          <div className="header-title">Zonas habituales</div>
+          <div className="header-subtitle">
+            {usuario?.rol === 'conductor' || usuario?.rol === 'ambos'
+              ? 'Paso 3 de 3 — Zonas'
+              : 'Paso 2 de 2 — Zonas'}
+          </div>
+        </div>
       </div>
       <div className="screen-content">
         <p style={{ fontSize: 14, color: 'var(--text2)', marginBottom: 16, lineHeight: 1.5 }}>

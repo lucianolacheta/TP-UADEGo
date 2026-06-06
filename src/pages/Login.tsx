@@ -4,11 +4,9 @@ import { IconMail, IconCheck, IconCar } from '@tabler/icons-react'
 import { useAuth } from '../contexts/AuthContext'
 
 export default function Login() {
-  const { session, loading, signInConEmail, signInConPassword } = useAuth()
+  const { session, loading, signInConEmail } = useAuth()
   const [searchParams] = useSearchParams()
-  const [modo, setModo] = useState<'magic' | 'password'>('magic')
   const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
   const [enviado, setEnviado] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [cargando, setCargando] = useState(false)
@@ -29,12 +27,10 @@ export default function Login() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     setCargando(true); setError(null)
-    const { error: err } = modo === 'magic'
-      ? await signInConEmail(email)
-      : await signInConPassword(email, password)
+    const { error: err } = await signInConEmail(email)
     setCargando(false)
     if (err) { setError(err); return }
-    if (modo === 'magic') setEnviado(true)
+    setEnviado(true)
   }
 
   if (enviado) {
@@ -44,9 +40,7 @@ export default function Login() {
           <IconMail size={48} />
         </div>
         <div style={{ fontSize: 24, fontWeight: 800, color: 'var(--text)', marginBottom: 10 }}>Revisá tu correo UADE</div>
-        <div style={{ fontSize: 14, color: 'var(--text2)', lineHeight: 1.6, marginBottom: 6 }}>
-          Enviamos un link de acceso a
-        </div>
+        <div style={{ fontSize: 14, color: 'var(--text2)', lineHeight: 1.6, marginBottom: 6 }}>Enviamos un link de acceso a</div>
         <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--blue)', marginBottom: 32 }}>{email}</div>
         <button className="btn btn-outline" onClick={() => setEnviado(false)}>Cambiar email</button>
       </div>
@@ -55,7 +49,6 @@ export default function Login() {
 
   return (
     <div className="screen">
-      {/* Header con gradiente */}
       <div style={{ background: 'linear-gradient(160deg,#0F2167,#1A6FE8)', padding: '48px 24px 32px', display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center' }}>
         <div style={{ width: 64, height: 64, background: 'rgba(255,255,255,0.15)', borderRadius: 18, display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 14, backdropFilter: 'blur(10px)' }}>
           <IconCar size={32} color="white" />
@@ -84,58 +77,27 @@ export default function Login() {
                 autoComplete="email"
                 autoFocus
               />
-              {emailValido && (
-                <span className="badge-valid"><IconCheck size={11} /> UADE</span>
-              )}
+              {emailValido && <span className="badge-valid"><IconCheck size={11} /> UADE</span>}
             </div>
           </div>
-
-          {modo === 'password' && (
-            <div className="input-group" style={{ marginTop: 12 }}>
-              <label className="input-label">Contraseña</label>
-              <input
-                className="input-field"
-                type="password"
-                placeholder="La que configuraste en Supabase"
-                value={password}
-                onChange={e => setPassword(e.target.value)}
-                autoComplete="current-password"
-              />
-            </div>
-          )}
 
           {error && <p style={{ color: 'var(--danger)', fontSize: 14, marginBottom: 12 }}>{error}</p>}
 
-          <button className="btn btn-primary" type="submit" disabled={cargando || !emailValido || (modo === 'password' && !password)}>
-            {cargando
-              ? (modo === 'magic' ? 'Enviando link...' : 'Entrando...')
-              : (modo === 'magic' ? 'Recibir link de acceso →' : 'Entrar →')}
-          </button>
-
-          <button
-            type="button"
-            className="btn btn-outline"
-            style={{ marginTop: 10 }}
-            onClick={() => { setModo(m => m === 'magic' ? 'password' : 'magic'); setError(null) }}
-          >
-            {modo === 'magic' ? 'Entrar con contraseña (dev)' : 'Usar magic link'}
+          <button className="btn btn-primary" type="submit" disabled={cargando || !emailValido}>
+            {cargando ? 'Enviando link...' : 'Recibir link de acceso →'}
           </button>
 
           <div style={{ textAlign: 'center', marginTop: 16, fontSize: 14, color: 'var(--text2)' }}>
-            {modo === 'magic'
-              ? '¿Primera vez? El link también crea tu cuenta automáticamente.'
-              : 'Sin mails: creá el usuario en Supabase Dashboard con contraseña.'}
+            ¿Primera vez? El link también crea tu cuenta automáticamente.
           </div>
         </form>
 
-        {modo === 'magic' && (
         <div style={{ marginTop: 32, background: 'var(--bg)', borderRadius: 'var(--radius-sm)', padding: 14, display: 'flex', gap: 10 }}>
           <span style={{ fontSize: 16, flexShrink: 0 }}>ℹ️</span>
           <div style={{ fontSize: 13, color: 'var(--text2)', lineHeight: 1.5 }}>
-            Cuando llegue el mail, abrí el link en <strong>el mismo navegador</strong> (Chrome/Safari). Si usás el visor del mail, puede fallar.
+            Cuando llegue el mail, abrí el link en <strong>el mismo navegador</strong> donde lo pediste. Si usás el visor del mail, puede fallar.
           </div>
         </div>
-        )}
       </div>
     </div>
   )

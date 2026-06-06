@@ -29,11 +29,17 @@ export default function VerifyEmail() {
         Revisá tu correo UADE
       </div>
       <div style={{ fontSize: 14, color: 'var(--text2)', textAlign: 'center', lineHeight: 1.6 }}>
-        Enviamos un link de verificación a
+        {email
+          ? <>Enviamos un link de verificación a</>
+          : <>Revisá tu bandeja de entrada y seguí el link que te enviamos.</>
+        }
       </div>
-      <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--blue)', margin: '6px 0 32px', textAlign: 'center' }}>
-        {email}
-      </div>
+      {email && (
+        <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--blue)', margin: '6px 0 32px', textAlign: 'center' }}>
+          {email}
+        </div>
+      )}
+      {!email && <div style={{ marginBottom: 32 }} />}
       <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: 10 }}>
         <button className="btn btn-primary" onClick={() => nav('/bienvenida')}>Ya verifiqué ✓</button>
         <button className="btn btn-outline" onClick={reenviar} disabled={reenviando || enviado}>

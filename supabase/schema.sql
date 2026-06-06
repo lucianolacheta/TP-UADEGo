@@ -92,12 +92,14 @@ language plpgsql
 security definer set search_path = public
 as $$
 begin
-  insert into public.usuarios (id, nombre, email, validado_uade)
+  -- Todos los usuarios son conductores y pasajeros (rol = 'ambos')
+  insert into public.usuarios (id, nombre, email, validado_uade, rol)
   values (
     new.id,
     coalesce(new.raw_user_meta_data->>'nombre', split_part(new.email, '@', 1)),
     new.email,
-    new.email like '%@uade.edu.ar'
+    new.email like '%@uade.edu.ar',
+    'ambos'
   );
   return new;
 end;

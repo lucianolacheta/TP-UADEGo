@@ -3,8 +3,6 @@ import { useNavigate } from 'react-router-dom'
 import { IconSchool, IconBell, IconShield, IconHelp, IconLogout, IconCamera } from '@tabler/icons-react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
-import type { RolUsuario } from '../lib/types'
-
 function iniciales(nombre: string) {
   return nombre.split(' ').map(p => p[0]).slice(0, 2).join('').toUpperCase()
 }
@@ -12,8 +10,8 @@ function iniciales(nombre: string) {
 export default function Profile() {
   const nav = useNavigate()
   const { usuario, refreshUsuario, signOut } = useAuth()
-  const [form, setForm] = useState<{ nombre: string; zona: string; horario_habitual: string; telefono: string; rol: RolUsuario }>(
-    { nombre: '', zona: '', horario_habitual: '', telefono: '', rol: 'pasajero' }
+  const [form, setForm] = useState<{ nombre: string; zona: string; horario_habitual: string; telefono: string }>(
+    { nombre: '', zona: '', horario_habitual: '', telefono: '' }
   )
   const [guardando, setGuardando] = useState(false)
   const [ok, setOk] = useState(false)
@@ -26,7 +24,6 @@ export default function Profile() {
       zona: usuario.zona ?? '',
       horario_habitual: usuario.horario_habitual ?? '',
       telefono: usuario.telefono ?? '',
-      rol: usuario.rol ?? 'pasajero',
     })
   }, [usuario])
 
@@ -101,14 +98,6 @@ export default function Profile() {
               <input className="input-field" value={form.nombre} onChange={e => setForm({ ...form, nombre: e.target.value })} required />
             </div>
             <div className="input-group">
-              <label className="input-label">Rol</label>
-              <select className="input-field" value={form.rol} onChange={e => setForm({ ...form, rol: e.target.value as RolUsuario })}>
-                <option value="pasajero">Pasajero</option>
-                <option value="conductor">Conductor</option>
-                <option value="ambos">Ambos</option>
-              </select>
-            </div>
-            <div className="input-group">
               <label className="input-label">Zona</label>
               <input className="input-field" value={form.zona} onChange={e => setForm({ ...form, zona: e.target.value })} placeholder="Ej. Belgrano" />
             </div>
@@ -127,10 +116,6 @@ export default function Profile() {
         ) : (
           <div className="card">
             <div className="section-title">Información</div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 10 }}>
-              <span style={{ fontSize: 13, color: 'var(--text2)' }}>Rol</span>
-              <span style={{ fontSize: 14, fontWeight: 600, textTransform: 'capitalize' }}>{usuario.rol}</span>
-            </div>
             {usuario.zona && (
               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 10 }}>
                 <span style={{ fontSize: 13, color: 'var(--text2)' }}>Zona</span>
@@ -155,11 +140,15 @@ export default function Profile() {
         <div className="card">
           <div className="section-title">Configuración</div>
           {[
-            { icon: <IconBell size={18} />, label: 'Notificaciones' },
-            { icon: <IconShield size={18} />, label: 'Privacidad y seguridad' },
-            { icon: <IconHelp size={18} />, label: 'Ayuda y FAQ' },
+            { icon: <IconBell size={18} />, label: 'Notificaciones', msg: 'Las notificaciones push estarán disponibles próximamente.' },
+            { icon: <IconShield size={18} />, label: 'Privacidad y seguridad', msg: 'Tu privacidad está protegida por las políticas de UADE CarPool.' },
+            { icon: <IconHelp size={18} />, label: 'Ayuda y FAQ', msg: 'Para consultas, escribí a soporte@uadecarpool.edu.ar' },
           ].map(item => (
-            <div key={item.label} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 0', borderBottom: '1px solid var(--border)', cursor: 'pointer' }}>
+            <div
+              key={item.label}
+              onClick={() => alert(item.msg)}
+              style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 0', borderBottom: '1px solid var(--border)', cursor: 'pointer' }}
+            >
               <span style={{ color: 'var(--text3)' }}>{item.icon}</span>
               <span style={{ fontSize: 14, flex: 1 }}>{item.label}</span>
               <span style={{ color: 'var(--text3)', fontSize: 16 }}>›</span>

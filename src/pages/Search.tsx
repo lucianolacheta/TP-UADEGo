@@ -1,96 +1,156 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { IconArrowLeft, IconCurrentLocation } from '@tabler/icons-react'
-import SeatSelector from '../components/ui/SeatSelector'
+import { IconArrowLeft, IconMapPin, IconSchool, IconSun, IconMoon, IconCloud } from '@tabler/icons-react'
+import { SEDES_UADE, type SedeUADE, type FranjaHorario } from '../lib/viajeUtils'
 import PlacesInput from '../components/ui/PlacesInput'
+
+const ZONAS_RAPIDAS = [
+  'Palermo', 'Belgrano', 'Caballito', 'Villa Crespo', 'Almagro',
+  'Flores', 'Recoleta', 'Balvanera', 'Chacarita', 'Boedo',
+  'Núñez', 'Saavedra', 'Liniers', 'Ramos Mejía', 'Morón',
+  'Lanús', 'Avellaneda', 'Quilmes', 'San Justo', 'Mataderos',
+]
+
+const TURNOS: { key: FranjaHorario; label: string; icon: React.ReactNode; hint: string }[] = [
+  { key: 'manana', label: 'Mañana', icon: <IconSun size={20} />, hint: 'Hasta las 12 hs' },
+  { key: 'tarde',  label: 'Tarde',  icon: <IconCloud size={20} />, hint: '12 a 18 hs' },
+  { key: 'noche',  label: 'Noche',  icon: <IconMoon size={20} />, hint: 'Después de 18 hs' },
+]
 
 export default function Search() {
   const nav = useNavigate()
-  const [origen, setOrigen] = useState('')
+  const [zona, setZona] = useState('')
+  const [sede, setSede] = useState<SedeUADE>(SEDES_UADE[0])
+  const [turno, setTurno] = useState<FranjaHorario>('')
   const [fecha, setFecha] = useState(new Date().toISOString().split('T')[0])
-  const [hora, setHora] = useState('21:00')
-  const [pasajeros, setPasajeros] = useState(1)
 
   function buscar() {
-    nav(`/resultados?origen=${encodeURIComponent(origen)}&fecha=${fecha}`)
+    const params = new URLSearchParams()
+    if (zona) params.set('zona', zona)
+    params.set('sede', sede)
+    if (turno) params.set('turno', turno)
+    params.set('fecha', fecha)
+    nav(`/resultados?${params.toString()}`)
   }
 
   return (
     <div className="screen">
       <div className="screen-header">
-        <button className="back-btn" onClick={() => nav('/')}><IconArrowLeft size={18} /></button>
+        <button className="back-btn" onClick={() => nav(-1)}><IconArrowLeft size={18} /></button>
         <div className="header-title">Buscar viaje</div>
       </div>
+
       <div className="screen-content">
-
-        {/* Campo origen/destino */}
-        <div style={{ background: 'white', borderRadius: 'var(--radius)', border: '1.5px solid var(--border)', overflow: 'hidden', marginBottom: 16 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '14px 16px', borderBottom: '1px solid var(--border)' }}>
-            <div className="route-line">
-              <div className="route-dot" style={{ background: 'var(--blue)' }} />
-              <div className="route-line-seg" />
-            </div>
-            <div style={{ flex: 1 }}>
-              <div style={{ fontSize: 12, color: 'var(--text3)', marginBottom: 2 }}>Salida desde</div>
-              <PlacesInput
-                style={{ border: 'none', outline: 'none', fontSize: 15, fontWeight: 600, fontFamily: 'var(--font)', color: 'var(--text)', width: '100%', background: 'transparent' }}
-                value={origen}
-                onChange={setOrigen}
-                placeholder="¿Desde dónde salís?"
-              />
-            </div>
-            <button style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--blue)' }}>
-              <IconCurrentLocation size={20} />
-            </button>
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '14px 16px' }}>
-            <div className="route-line">
-              <div className="route-dot" style={{ background: 'var(--orange)' }} />
-            </div>
-            <div style={{ flex: 1 }}>
-              <div style={{ fontSize: 12, color: 'var(--text3)', marginBottom: 2 }}>Destino</div>
-              <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--blue)' }}>UADE — Lima 717, CABA</div>
-            </div>
-            <div style={{ background: 'var(--blue-light)', borderRadius: 6, padding: '3px 8px', fontSize: 11, fontWeight: 700, color: 'var(--blue)' }}>Fijo</div>
-          </div>
-        </div>
-
-        <div style={{ display: 'flex', gap: 10, marginBottom: 16 }}>
-          <div style={{ flex: 1 }}>
-            <label className="input-label">Fecha</label>
-            <input className="input-field" type="date" value={fecha} onChange={e => setFecha(e.target.value)} />
-          </div>
-          <div style={{ flex: 1 }}>
-            <label className="input-label">Hora aprox.</label>
-            <input className="input-field" type="time" value={hora} onChange={e => setHora(e.target.value)} />
-          </div>
-        </div>
-
+        {/* Zona de origen */}
         <div className="input-group">
-          <label className="input-label">Asientos necesarios</label>
-          <SeatSelector value={pasajeros} min={1} max={4} label="Pasajeros" onChange={setPasajeros} />
+          <label className="input-label">¿Desde qué zona salís?</label>
+          <div className="input-with-icon">
+            <span className="input-icon"><IconMapPin size={18} /></span>
+            <PlacesInput
+              className="input-field"
+              style={{ paddingLeft: 44 }}
+              placeholder="Ej: Palermo, Belgrano, Caballito..."
+              value={zona}
+              onChange={setZona}
+            />
+          </div>
+          {/* Chips rápidos (se muestran solo si no hay texto o no hay API key activa) */}
+          <div className="chips-row" style={{ marginTop: 8 }}>
+            {ZONAS_RAPIDAS.filter(z =>
+              !zona || z.toLowerCase().startsWith(zona.toLowerCase())
+            ).slice(0, 8).map(z => (
+              <button
+                key={z}
+                className={`chip ${zona === z ? 'active' : ''}`}
+                onClick={() => setZona(z)}
+              >
+                {z}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Sede destino */}
+        <div className="input-group">
+          <label className="input-label">Sede UADE de destino</label>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            {SEDES_UADE.map(s => (
+              <button
+                key={s}
+                type="button"
+                onClick={() => setSede(s)}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: 12,
+                  padding: '12px 16px', borderRadius: 'var(--radius-sm)',
+                  border: `1.5px solid ${sede === s ? 'var(--blue)' : 'var(--border)'}`,
+                  background: sede === s ? 'var(--blue-light)' : 'white',
+                  cursor: 'pointer', textAlign: 'left', fontFamily: 'var(--font)',
+                }}
+              >
+                <IconSchool size={18} color={sede === s ? 'var(--blue)' : 'var(--text3)'} />
+                <span style={{ fontSize: 14, fontWeight: 600, color: sede === s ? 'var(--blue)' : 'var(--text)' }}>{s}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Turno */}
+        <div className="input-group">
+          <label className="input-label">Turno</label>
+          <div style={{ display: 'flex', gap: 8 }}>
+            {TURNOS.map(t => (
+              <button
+                key={t.key}
+                type="button"
+                onClick={() => setTurno(prev => prev === t.key ? '' : t.key)}
+                style={{
+                  flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4,
+                  padding: '12px 8px', borderRadius: 'var(--radius-sm)',
+                  border: `1.5px solid ${turno === t.key ? 'var(--blue)' : 'var(--border)'}`,
+                  background: turno === t.key ? 'var(--blue-light)' : 'white',
+                  cursor: 'pointer', fontFamily: 'var(--font)',
+                  color: turno === t.key ? 'var(--blue)' : 'var(--text2)',
+                }}
+              >
+                {t.icon}
+                <span style={{ fontSize: 13, fontWeight: 700 }}>{t.label}</span>
+                <span style={{ fontSize: 11 }}>{t.hint}</span>
+              </button>
+            ))}
+          </div>
+          {!turno && <div style={{ fontSize: 12, color: 'var(--text3)', marginTop: 4 }}>Sin seleccionar = todos los horarios</div>}
+        </div>
+
+        {/* Fecha */}
+        <div className="input-group">
+          <label className="input-label">Fecha</label>
+          <input className="input-field" type="date" value={fecha} onChange={e => setFecha(e.target.value)} />
         </div>
 
         <button className="btn btn-primary" onClick={buscar}>Buscar viajes →</button>
 
-        <div style={{ marginTop: 20, fontSize: 14, fontWeight: 700, color: 'var(--text)', marginBottom: 10 }}>Búsquedas frecuentes</div>
-        {[
-          { origen: 'Palermo', hora: 'Noche · 21:00 hs' },
-          { origen: 'Belgrano', hora: 'Noche · 20:45 hs' },
-        ].map(s => (
-          <div
-            key={s.origen}
-            onClick={() => { setOrigen(s.origen); buscar() }}
-            style={{ background: 'white', borderRadius: 'var(--radius-sm)', border: '1.5px solid var(--border)', padding: 12, display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', marginBottom: 8 }}
-          >
-            <span style={{ fontSize: 16 }}>🕘</span>
-            <div>
-              <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--text)' }}>{s.origen} → UADE</div>
-              <div style={{ fontSize: 12, color: 'var(--text2)' }}>{s.hora}</div>
+        {/* Búsquedas frecuentes */}
+        <div style={{ marginTop: 24 }}>
+          <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text)', marginBottom: 10 }}>Búsquedas frecuentes</div>
+          {[
+            { zona: 'Palermo', turno: 'noche' as FranjaHorario, label: 'Noche' },
+            { zona: 'Belgrano', turno: 'noche' as FranjaHorario, label: 'Noche' },
+            { zona: 'Caballito', turno: 'tarde' as FranjaHorario, label: 'Tarde' },
+          ].map(s => (
+            <div
+              key={s.zona + s.turno}
+              onClick={() => { setZona(s.zona); setTurno(s.turno); }}
+              style={{ background: 'white', borderRadius: 'var(--radius-sm)', border: '1.5px solid var(--border)', padding: 12, display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', marginBottom: 8 }}
+            >
+              <span style={{ fontSize: 16 }}>🕘</span>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--text)' }}>{s.zona} → {sede}</div>
+                <div style={{ fontSize: 12, color: 'var(--text2)' }}>{s.label}</div>
+              </div>
+              <span style={{ color: 'var(--text3)' }}>→</span>
             </div>
-            <span style={{ marginLeft: 'auto', fontSize: 16, color: 'var(--text3)' }}>→</span>
-          </div>
-        ))}
+          ))}
+        </div>
       </div>
     </div>
   )

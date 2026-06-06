@@ -47,7 +47,19 @@ export default function ManageRequest() {
   }
 
   if (loading) return <div className="screen" style={{ alignItems: 'center', justifyContent: 'center' }}><p className="muted">Cargando...</p></div>
-  if (!sol) return <div className="screen" style={{ padding: 32 }}><p style={{ color: 'var(--danger)' }}>{error}</p></div>
+  if (!sol) return (
+    <div className="screen">
+      <div className="screen-header">
+        <button className="back-btn" onClick={() => nav(-1)}><IconArrowLeft size={18} /></button>
+        <div className="header-title">Solicitud no encontrada</div>
+      </div>
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '32px 24px', textAlign: 'center' }}>
+        <div style={{ fontSize: 40, marginBottom: 16 }}>😕</div>
+        <p style={{ color: 'var(--danger)', marginBottom: 20, fontSize: 14 }}>{error ?? 'No se pudo cargar la solicitud.'}</p>
+        <button className="btn btn-outline btn-sm" onClick={() => nav(-1)}>Volver</button>
+      </div>
+    </div>
+  )
 
   const v = sol.viaje
 
