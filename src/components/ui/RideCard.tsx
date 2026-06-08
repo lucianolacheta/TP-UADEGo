@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom'
 import { IconArmchair, IconClock, IconStarFilled } from '@tabler/icons-react'
 import type { ViajeConConductor } from '../../lib/types'
-import { costoPorPersona } from '../../lib/viajeUtils'
+import { costoPorPersona, esViajeVuelta } from '../../lib/viajeUtils'
 import DriverAvatar from './DriverAvatar'
 
 interface Props {
@@ -10,6 +10,7 @@ interface Props {
 
 export default function RideCard({ viaje }: Props) {
   const porPersona = costoPorPersona(viaje.costo_estimado, viaje.cupos)
+  const esVuelta = esViajeVuelta(viaje)
   return (
     <Link to={`/viaje/${viaje.id}`} style={{ textDecoration: 'none', color: 'inherit', display: 'block' }}>
       <div className="ride-card">
@@ -35,6 +36,9 @@ export default function RideCard({ viaje }: Props) {
           </div>
         </div>
         <div className="ride-meta">
+          <div className="meta-tag">
+            {esVuelta ? '🌙 Vuelta' : '🌅 Ida'}
+          </div>
           <div className="meta-tag">
             <IconArmchair size={14} />
             {viaje.cupos_disponibles} asientos libres

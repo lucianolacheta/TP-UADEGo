@@ -3,7 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom'
 import { IconArrowLeft, IconCurrencyDollar, IconStar } from '@tabler/icons-react'
 import type { ViajeConConductor } from '../lib/types'
 import { getViajesDisponibles } from '../services/viajesService'
-import { coincideZona, horarioEnFranja, type FranjaHorario } from '../lib/viajeUtils'
+import { filtrarViajesBusqueda, type FranjaHorario, type TipoTrayecto } from '../lib/viajeUtils'
 import { useAuth } from '../contexts/AuthContext'
 import RideCard from '../components/ui/RideCard'
 import EmptyState from '../components/ui/EmptyState'
@@ -13,6 +13,7 @@ export default function Results() {
   const { usuario } = useAuth()
   const [params] = useSearchParams()
 
+  const tipo  = (params.get('tipo') ?? 'ida') as TipoTrayecto
   const zona   = params.get('zona')  ?? ''
   const sede   = params.get('sede')  ?? ''
   const turno  = (params.get('turno') ?? '') as FranjaHorario
@@ -26,16 +27,13 @@ export default function Results() {
   useEffect(() => {
     getViajesDisponibles()
       .then(vs => {
-        let filtrados = vs.filter(v => v.conductor_id !== usuario?.id)
-        if (sede)  filtrados = filtrados.filter(v => v.destino === sede)
-        if (fecha) filtrados = filtrados.filter(v => v.fecha === fecha)
-        if (turno) filtrados = filtrados.filter(v => horarioEnFranja(v.horario, turno))
-        if (zona)  filtrados = filtrados.filter(v => coincideZona(v.origen, zona))
-        setViajes(filtrados)
+        setViajes(filtrarViajesBusqueda(vs, {
+          zona, sede, turno, fecha, tipo, excluirConductorId: usuario?.id,
+        }))
       })
       .catch(() => setError('No se pudieron cargar los viajes.'))
       .finally(() => setLoading(false))
-  }, [zona, sede, turno, fecha])
+  }, [zona, sede, turno, fecha, tipo, usuario?.id])
 
   const ordenados = [...viajes].sort((a, b) => {
     if (orden === 'precio') return a.costo_estimado - b.costo_estimado
@@ -43,7 +41,12 @@ export default function Results() {
     return a.horario.localeCompare(b.horario)
   })
 
-  const subtitulo = [zona || 'Cualquier zona', sede || 'UADE', fecha].filter(Boolean).join(' · ')
+  const subtitulo = [
+    tipo === 'vuelta' ? 'Vuelta' : 'Ida',
+    zona || 'Cualquier zona',
+    sede || 'UADE',
+    fecha,
+  ].filter(Boolean).join(' · ')
 
   return (
     <div className="screen">
@@ -72,7 +75,11 @@ export default function Results() {
         {!loading && (
           <div style={{ fontSize: 13, color: 'var(--text2)', marginBottom: 12 }}>
             {ordenados.length} {ordenados.length === 1 ? 'viaje disponible' : 'viajes disponibles'}
-            {zona && <span style={{ color: 'var(--blue)', fontWeight: 600 }}> cerca de {zona}</span>}
+            {zona && (
+              <span style={{ color: 'var(--blue)', fontWeight: 600 }}>
+                {tipo === 'vuelta' ? ` hacia ${zona}` : ` cerca de ${zona}`}
+              </span>
+            )}
           </div>
         )}
 
@@ -94,7 +101,9 @@ export default function Results() {
             emoji="🔍"
             titulo="Sin viajes disponibles"
             subtitulo={zona
-              ? `No encontramos viajes desde ${zona} o zonas cercanas. Probá con otra zona o sin filtros.`
+              ? tipo === 'vuelta'
+                ? `No encontramos vueltas hacia ${zona} o zonas cercanas. Probá con otra zona.`
+                : `No encontramos viajes desde ${zona} o zonas cercanas. Probá con otra zona o sin filtros.`
               : 'No hay viajes para esta búsqueda. Probá otro turno o fecha.'}
           >
             <button className="btn btn-outline" style={{ marginTop: 8 }} onClick={() => nav('/buscar')}>Modificar búsqueda</button>

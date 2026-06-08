@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { coincideZona, costoPorPersona, horarioEnFranja } from './viajeUtils'
+import { coincideZona, costoPorPersona, esViajeIda, esViajeVuelta, filtrarViajesBusqueda, horarioEnFranja } from './viajeUtils'
 
 describe('costoPorPersona', () => {
   it('divide el costo total entre cupos', () => {
@@ -46,5 +46,35 @@ describe('coincideZona', () => {
 
   it('no matchea zonas lejanas', () => {
     expect(coincideZona('Quilmes', 'belgrano')).toBe(false)
+  })
+})
+
+describe('esViajeIda / esViajeVuelta', () => {
+  it('detecta ida hacia sede UADE', () => {
+    expect(esViajeIda({ origen: 'Palermo', destino: 'UADE Monserrat' })).toBe(true)
+  })
+
+  it('detecta vuelta desde sede UADE', () => {
+    expect(esViajeVuelta({ origen: 'UADE Monserrat', destino: 'Palermo' })).toBe(true)
+  })
+})
+
+describe('filtrarViajesBusqueda', () => {
+  const viajes = [
+    { id: '1', origen: 'Palermo', destino: 'UADE Monserrat', fecha: '2026-06-05', horario: '08:00', conductor_id: 'a' },
+    { id: '2', origen: 'UADE Monserrat', destino: 'Palermo', fecha: '2026-06-05', horario: '18:00', conductor_id: 'a' },
+    { id: '3', origen: 'Belgrano', destino: 'UADE Recoleta', fecha: '2026-06-05', horario: '09:00', conductor_id: 'b' },
+  ]
+
+  it('filtra ida por zona y sede', () => {
+    const r = filtrarViajesBusqueda(viajes, { tipo: 'ida', zona: 'palermo', sede: 'UADE Monserrat', fecha: '2026-06-05' })
+    expect(r).toHaveLength(1)
+    expect(r[0].id).toBe('1')
+  })
+
+  it('filtra vuelta por zona y sede', () => {
+    const r = filtrarViajesBusqueda(viajes, { tipo: 'vuelta', zona: 'palermo', sede: 'UADE Monserrat', fecha: '2026-06-05' })
+    expect(r).toHaveLength(1)
+    expect(r[0].id).toBe('2')
   })
 })

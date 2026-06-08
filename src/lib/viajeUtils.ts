@@ -1,4 +1,5 @@
 export type FranjaHorario = '' | 'manana' | 'tarde' | 'noche'
+export type TipoTrayecto = 'ida' | 'vuelta'
 
 export const SEDES_UADE = [
   'UADE Monserrat',
@@ -6,6 +7,44 @@ export const SEDES_UADE = [
   'UADE Belgrano',
 ] as const
 export type SedeUADE = (typeof SEDES_UADE)[number]
+
+export function esSedeUade(texto: string): boolean {
+  return (SEDES_UADE as readonly string[]).includes(texto)
+}
+
+export function esViajeIda(viaje: { origen: string; destino: string }): boolean {
+  return esSedeUade(viaje.destino)
+}
+
+export function esViajeVuelta(viaje: { origen: string; destino: string }): boolean {
+  return esSedeUade(viaje.origen) && !esSedeUade(viaje.destino)
+}
+
+/** Filtra viajes según búsqueda de ida (zona → sede) o vuelta (sede → zona). */
+export function filtrarViajesBusqueda<T extends { origen: string; destino: string; fecha: string; horario: string; conductor_id: string }>(
+  viajes: T[],
+  opts: {
+    zona?: string
+    sede?: string
+    turno?: FranjaHorario
+    fecha?: string
+    tipo?: TipoTrayecto
+    excluirConductorId?: string
+  },
+): T[] {
+  const tipo = opts.tipo ?? 'ida'
+  let r = viajes.filter(v => v.conductor_id !== opts.excluirConductorId)
+  r = r.filter(v => (tipo === 'ida' ? esViajeIda(v) : esViajeVuelta(v)))
+  if (opts.fecha) r = r.filter(v => v.fecha === opts.fecha)
+  if (opts.turno) r = r.filter(v => horarioEnFranja(v.horario, opts.turno!))
+  if (opts.sede) {
+    r = r.filter(v => (tipo === 'ida' ? v.destino === opts.sede : v.origen === opts.sede))
+  }
+  if (opts.zona) {
+    r = r.filter(v => coincideZona(tipo === 'ida' ? v.origen : v.destino, opts.zona!))
+  }
+  return r
+}
 
 // Agrupación de barrios por zona geográfica para matching aproximado
 const ZONAS_CERCANAS: Record<string, string[]> = {

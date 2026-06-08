@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { IconArrowLeft, IconMapPin, IconSchool, IconSun, IconMoon, IconCloud } from '@tabler/icons-react'
-import { SEDES_UADE, type SedeUADE, type FranjaHorario } from '../lib/viajeUtils'
+import { SEDES_UADE, type SedeUADE, type FranjaHorario, type TipoTrayecto } from '../lib/viajeUtils'
 import PlacesInput from '../components/ui/PlacesInput'
 
 const ZONAS_RAPIDAS = [
@@ -19,6 +19,7 @@ const TURNOS: { key: FranjaHorario; label: string; icon: React.ReactNode; hint: 
 
 export default function Search() {
   const nav = useNavigate()
+  const [tipo, setTipo] = useState<TipoTrayecto>('ida')
   const [zona, setZona] = useState('')
   const [sede, setSede] = useState<SedeUADE>(SEDES_UADE[0])
   const [turno, setTurno] = useState<FranjaHorario>('')
@@ -26,6 +27,7 @@ export default function Search() {
 
   function buscar() {
     const params = new URLSearchParams()
+    params.set('tipo', tipo)
     if (zona) params.set('zona', zona)
     params.set('sede', sede)
     if (turno) params.set('turno', turno)
@@ -41,7 +43,37 @@ export default function Search() {
       </div>
 
       <div className="screen-content">
-        {/* Zona de origen */}
+        {/* Ida / Vuelta */}
+        <div className="input-group">
+          <label className="input-label">¿Qué viaje buscás?</label>
+          <div style={{ display: 'flex', gap: 8 }}>
+            {([
+              { key: 'ida' as TipoTrayecto, label: 'Ida', hint: 'Casa → UADE' },
+              { key: 'vuelta' as TipoTrayecto, label: 'Vuelta', hint: 'UADE → Casa' },
+            ]).map(t => (
+              <button
+                key={t.key}
+                type="button"
+                onClick={() => setTipo(t.key)}
+                style={{
+                  flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4,
+                  padding: '12px 8px', borderRadius: 'var(--radius-sm)',
+                  border: `1.5px solid ${tipo === t.key ? 'var(--blue)' : 'var(--border)'}`,
+                  background: tipo === t.key ? 'var(--blue-light)' : 'white',
+                  cursor: 'pointer', fontFamily: 'var(--font)',
+                  color: tipo === t.key ? 'var(--blue)' : 'var(--text2)',
+                }}
+              >
+                <span style={{ fontSize: 13, fontWeight: 700 }}>{t.label}</span>
+                <span style={{ fontSize: 11 }}>{t.hint}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {tipo === 'ida' ? (
+        <>
+        {/* Zona de origen (ida) */}
         <div className="input-group">
           <label className="input-label">¿Desde qué zona salís?</label>
           <div className="input-with-icon">
@@ -70,7 +102,7 @@ export default function Search() {
           </div>
         </div>
 
-        {/* Sede destino */}
+        {/* Sede destino (ida) */}
         <div className="input-group">
           <label className="input-label">Sede UADE de destino</label>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
@@ -93,6 +125,62 @@ export default function Search() {
             ))}
           </div>
         </div>
+        </>
+        ) : (
+        <>
+        {/* Sede origen (vuelta) */}
+        <div className="input-group">
+          <label className="input-label">¿Desde qué sede salís?</label>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            {SEDES_UADE.map(s => (
+              <button
+                key={s}
+                type="button"
+                onClick={() => setSede(s)}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: 12,
+                  padding: '12px 16px', borderRadius: 'var(--radius-sm)',
+                  border: `1.5px solid ${sede === s ? 'var(--blue)' : 'var(--border)'}`,
+                  background: sede === s ? 'var(--blue-light)' : 'white',
+                  cursor: 'pointer', textAlign: 'left', fontFamily: 'var(--font)',
+                }}
+              >
+                <IconSchool size={18} color={sede === s ? 'var(--blue)' : 'var(--text3)'} />
+                <span style={{ fontSize: 14, fontWeight: 600, color: sede === s ? 'var(--blue)' : 'var(--text)' }}>{s}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Zona destino (vuelta) */}
+        <div className="input-group">
+          <label className="input-label">¿A qué zona vas?</label>
+          <div className="input-with-icon">
+            <span className="input-icon"><IconMapPin size={18} /></span>
+            <PlacesInput
+              className="input-field"
+              style={{ paddingLeft: 44 }}
+              placeholder="Ej: Palermo, Belgrano, Caballito..."
+              value={zona}
+              onChange={setZona}
+            />
+          </div>
+          <div className="chips-row" style={{ marginTop: 8 }}>
+            {ZONAS_RAPIDAS.filter(z =>
+              !zona || z.toLowerCase().startsWith(zona.toLowerCase())
+            ).slice(0, 8).map(z => (
+              <button
+                key={z}
+                className={`chip ${zona === z ? 'active' : ''}`}
+                onClick={() => setZona(z)}
+              >
+                {z}
+              </button>
+            ))}
+          </div>
+        </div>
+        </>
+        )}
 
         {/* Turno */}
         <div className="input-group">
@@ -133,19 +221,21 @@ export default function Search() {
         <div style={{ marginTop: 24 }}>
           <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text)', marginBottom: 10 }}>Búsquedas frecuentes</div>
           {[
-            { zona: 'Palermo', turno: 'noche' as FranjaHorario, label: 'Noche' },
-            { zona: 'Belgrano', turno: 'noche' as FranjaHorario, label: 'Noche' },
-            { zona: 'Caballito', turno: 'tarde' as FranjaHorario, label: 'Tarde' },
+            { zona: 'Palermo', turno: 'noche' as FranjaHorario, label: 'Noche', tipo: 'ida' as TipoTrayecto },
+            { zona: 'Belgrano', turno: 'noche' as FranjaHorario, label: 'Noche', tipo: 'ida' as TipoTrayecto },
+            { zona: 'Caballito', turno: 'tarde' as FranjaHorario, label: 'Tarde', tipo: 'vuelta' as TipoTrayecto },
           ].map(s => (
             <div
-              key={s.zona + s.turno}
-              onClick={() => { setZona(s.zona); setTurno(s.turno); }}
+              key={s.zona + s.turno + s.tipo}
+              onClick={() => { setZona(s.zona); setTurno(s.turno); setTipo(s.tipo) }}
               style={{ background: 'white', borderRadius: 'var(--radius-sm)', border: '1.5px solid var(--border)', padding: 12, display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', marginBottom: 8 }}
             >
-              <span style={{ fontSize: 16 }}>🕘</span>
+              <span style={{ fontSize: 16 }}>{s.tipo === 'vuelta' ? '🌙' : '🕘'}</span>
               <div style={{ flex: 1 }}>
-                <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--text)' }}>{s.zona} → {sede}</div>
-                <div style={{ fontSize: 12, color: 'var(--text2)' }}>{s.label}</div>
+                <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--text)' }}>
+                  {s.tipo === 'vuelta' ? `${sede} → ${s.zona}` : `${s.zona} → ${sede}`}
+                </div>
+                <div style={{ fontSize: 12, color: 'var(--text2)' }}>{s.label} · {s.tipo === 'vuelta' ? 'Vuelta' : 'Ida'}</div>
               </div>
               <span style={{ color: 'var(--text3)' }}>→</span>
             </div>

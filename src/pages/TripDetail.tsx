@@ -3,11 +3,11 @@ import { useParams, useNavigate } from 'react-router-dom'
 import { IconArrowLeft, IconCheck } from '@tabler/icons-react'
 import { useAuth } from '../contexts/AuthContext'
 import type { ViajeConConductor, Solicitud, SolicitudConPasajero } from '../lib/types'
-import { costoPorPersona } from '../lib/viajeUtils'
+import { costoPorPersona, esViajeIda, esViajeVuelta, coincideZona } from '../lib/viajeUtils'
 import { getViajeConConductor, getSolicitudPropia, insertSolicitud, cancelarSolicitud, getSolicitudesDeViajes, getViajesDisponibles } from '../services/viajesService'
 import DriverAvatar from '../components/ui/DriverAvatar'
 import StatusPill from '../components/ui/StatusPill'
-import MapPlaceholder from '../components/ui/MapPlaceholder'
+import TripMap from '../components/ui/TripMap'
 
 export default function TripDetail() {
   const { id } = useParams<{ id: string }>()
@@ -20,8 +20,8 @@ export default function TripDetail() {
   const [enviando, setEnviando] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
-  const [pedirVuelta, setPedirVuelta] = useState(false)
-  const [viajeVuelta, setViajeVuelta] = useState<ViajeConConductor | null>(null)
+  const [pedirPareja, setPedirPareja] = useState(false)
+  const [viajePareja, setViajePareja] = useState<ViajeConConductor | null>(null)
 
   useEffect(() => {
     if (id && usuario) cargar()
@@ -42,16 +42,30 @@ export default function TripDetail() {
         const ss = await getSolicitudesDeViajes([id])
         setSolicitudesDelViaje(ss)
       }
-      // Buscar viaje de vuelta: mismo conductor, mismo día, origen = sede del viaje
+      // Buscar viaje pareado (ida↔vuelta del mismo conductor y día)
       if (v && usuario.id !== v.conductor_id) {
         const todos = await getViajesDisponibles()
-        const vuelta = todos.find(vv =>
-          vv.conductor_id === v.conductor_id &&
-          vv.fecha === v.fecha &&
-          vv.origen === v.destino &&
-          vv.id !== v.id
-        ) ?? null
-        setViajeVuelta(vuelta)
+        let pareja: ViajeConConductor | null = null
+
+        if (esViajeIda(v)) {
+          pareja = todos.find(vv =>
+            vv.conductor_id === v.conductor_id &&
+            vv.fecha === v.fecha &&
+            vv.origen === v.destino &&
+            coincideZona(vv.destino, v.origen) &&
+            vv.id !== v.id
+          ) ?? null
+        } else if (esViajeVuelta(v)) {
+          pareja = todos.find(vv =>
+            vv.conductor_id === v.conductor_id &&
+            vv.fecha === v.fecha &&
+            vv.destino === v.origen &&
+            coincideZona(vv.origen, v.destino) &&
+            vv.id !== v.id
+          ) ?? null
+        }
+
+        setViajePareja(pareja)
       }
     } catch {
       setError('No se pudo cargar el viaje. Intentá de nuevo.')
@@ -65,11 +79,21 @@ export default function TripDetail() {
     setEnviando(true); setError(null)
     try {
       await insertSolicitud(viaje.id, usuario.id, mensaje || null)
-      // Solicitar vuelta también si el usuario lo eligió
-      if (pedirVuelta && viajeVuelta) {
-        await insertSolicitud(viajeVuelta.id, usuario.id, `Vuelta de ${viaje.destino} a ${viaje.origen}`)
+      if (pedirPareja && viajePareja) {
+        const msgPareja = esViajeIda(viaje)
+          ? `Vuelta de ${viaje.destino} a ${viaje.origen}`
+          : `Ida de ${viajePareja.origen} a ${viajePareja.destino}`
+        await insertSolicitud(viajePareja.id, usuario.id, msgPareja)
       }
-      nav('/confirmacion', { state: { viaje, conductor: viaje.conductor, conVuelta: pedirVuelta && !!viajeVuelta } })
+      nav('/confirmacion', {
+        state: {
+          viaje,
+          conductor: viaje.conductor,
+          conPareja: pedirPareja && !!viajePareja,
+          esVuelta: esViajeVuelta(viaje),
+          viajePareja: pedirPareja ? viajePareja : null,
+        },
+      })
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : 'No se pudo enviar la solicitud.')
     } finally {
@@ -102,6 +126,8 @@ export default function TripDetail() {
   const esElConductor = usuario?.id === viaje.conductor_id
   const sinCupos = viaje.cupos_disponibles === 0
   const porPersona = costoPorPersona(viaje.costo_estimado, viaje.cupos)
+  const esVuelta = esViajeVuelta(viaje)
+  const etiquetaPareja = esVuelta ? 'ida' : 'vuelta'
 
   return (
     <div className="screen">
@@ -138,7 +164,7 @@ export default function TripDetail() {
         </div>
 
         {/* Mapa */}
-        <MapPlaceholder origen={viaje.origen} destino="UADE Lima 717" duracion="~25 min" />
+        <TripMap origen={viaje.origen} destino={viaje.destino} puntoEncuentro={viaje.punto_encuentro} />
 
         {/* Detalles del viaje */}
         <div className="card" style={{ marginBottom: 14 }}>
@@ -218,32 +244,32 @@ export default function TripDetail() {
             />
           </div>
 
-          {/* Toggle vuelta */}
-          {viajeVuelta && (
+          {/* Toggle ida/vuelta pareada */}
+          {viajePareja && (
             <div
-              onClick={() => setPedirVuelta(v => !v)}
+              onClick={() => setPedirPareja(v => !v)}
               style={{
                 display: 'flex', alignItems: 'center', justifyContent: 'space-between',
                 padding: '10px 12px', borderRadius: 'var(--radius-xs)', marginBottom: 10, cursor: 'pointer',
-                border: `1.5px solid ${pedirVuelta ? 'var(--blue)' : 'var(--border)'}`,
-                background: pedirVuelta ? 'var(--blue-light)' : 'white',
+                border: `1.5px solid ${pedirPareja ? 'var(--blue)' : 'var(--border)'}`,
+                background: pedirPareja ? 'var(--blue-light)' : 'white',
               }}
             >
               <div>
-                <div style={{ fontSize: 13, fontWeight: 700, color: pedirVuelta ? 'var(--blue)' : 'var(--text)' }}>
-                  🔄 También quiero la vuelta
+                <div style={{ fontSize: 13, fontWeight: 700, color: pedirPareja ? 'var(--blue)' : 'var(--text)' }}>
+                  🔄 También quiero la {etiquetaPareja}
                 </div>
                 <div style={{ fontSize: 12, color: 'var(--text2)' }}>
-                  {viajeVuelta.origen} → {viajeVuelta.destino} · {viajeVuelta.horario.slice(0, 5)} hs
+                  {viajePareja.origen} → {viajePareja.destino} · {viajePareja.horario.slice(0, 5)} hs
                 </div>
               </div>
               <div style={{
                 width: 40, height: 22, borderRadius: 11,
-                background: pedirVuelta ? 'var(--blue)' : 'var(--border)',
+                background: pedirPareja ? 'var(--blue)' : 'var(--border)',
                 position: 'relative', transition: 'background 0.2s',
               }}>
                 <div style={{
-                  position: 'absolute', top: 2, left: pedirVuelta ? 20 : 2,
+                  position: 'absolute', top: 2, left: pedirPareja ? 20 : 2,
                   width: 18, height: 18, borderRadius: '50%',
                   background: 'white', transition: 'left 0.2s',
                   boxShadow: '0 1px 3px rgba(0,0,0,0.2)',

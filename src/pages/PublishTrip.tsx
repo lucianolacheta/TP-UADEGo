@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { IconArrowLeft } from '@tabler/icons-react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
-import { SEDES_UADE, type SedeUADE } from '../lib/viajeUtils'
+import { SEDES_UADE, type SedeUADE, type TipoTrayecto } from '../lib/viajeUtils'
 import SeatSelector from '../components/ui/SeatSelector'
 import PlacesInput from '../components/ui/PlacesInput'
 
@@ -14,13 +14,48 @@ const ZONAS_RAPIDAS = [
   'Lanús', 'Avellaneda', 'Quilmes', 'San Justo', 'Mataderos',
 ]
 
+function SelectorSede({
+  label,
+  sede,
+  onChange,
+}: {
+  label: string
+  sede: SedeUADE
+  onChange: (sede: SedeUADE) => void
+}) {
+  return (
+    <div className="input-group">
+      <label className="input-label">{label}</label>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+        {SEDES_UADE.map(s => (
+          <button
+            key={s}
+            type="button"
+            onClick={() => onChange(s)}
+            style={{
+              display: 'flex', alignItems: 'center', gap: 12,
+              padding: '12px 16px', borderRadius: 'var(--radius-sm)',
+              border: `1.5px solid ${sede === s ? 'var(--blue)' : 'var(--border)'}`,
+              background: sede === s ? 'var(--blue-light)' : 'white',
+              cursor: 'pointer', textAlign: 'left', fontFamily: 'var(--font)',
+            }}
+          >
+            <span style={{ fontSize: 14, fontWeight: 600, color: sede === s ? 'var(--blue)' : 'var(--text)' }}>{s}</span>
+          </button>
+        ))}
+      </div>
+    </div>
+  )
+}
+
 export default function PublishTrip() {
   const { usuario } = useAuth()
   const nav = useNavigate()
 
+  const [tipo, setTipo] = useState<TipoTrayecto>('ida')
   const [form, setForm] = useState({
-    origen: '',
-    destino: SEDES_UADE[0] as SedeUADE,
+    ubicacion: '',
+    sede: SEDES_UADE[0] as SedeUADE,
     fecha: '',
     horario: '',
     cupos: 3,
@@ -40,53 +75,59 @@ export default function PublishTrip() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
-    if (form.origen.trim().length < 3) { setError('Escribí la zona de origen (mínimo 3 caracteres).'); return }
+    if (form.ubicacion.trim().length < 3) {
+      setError(tipo === 'vuelta' ? 'Escribí la zona de destino (mínimo 3 caracteres).' : 'Escribí la zona de origen (mínimo 3 caracteres).')
+      return
+    }
     if (form.fecha < new Date().toISOString().split('T')[0]) { setError('La fecha no puede ser en el pasado.'); return }
     if (!form.horario) { setError('Indicá la hora de salida.'); return }
-    if (tieneVuelta && !horaVuelta) { setError('Indicá la hora de vuelta.'); return }
+    if (tipo === 'ida' && tieneVuelta && !horaVuelta) { setError('Indicá la hora de vuelta.'); return }
     if (!usuario) return
 
     setGuardando(true); setError(null)
 
-    // Viaje de ida
-    const notasIda = [
+    const ubicacion = form.ubicacion.trim()
+    const origen = tipo === 'ida' ? ubicacion : form.sede
+    const destino = tipo === 'ida' ? form.sede : ubicacion
+
+    const notasViaje = [
       form.notas || null,
-      tieneVuelta ? `Vuelta: ${horaVuelta} hs desde ${form.destino}` : null,
+      tipo === 'ida' && tieneVuelta ? `Vuelta: ${horaVuelta} hs desde ${form.sede}` : null,
     ].filter(Boolean).join(' · ')
 
-    const { data: vIda, error: errIda } = await supabase
+    const { error: errPrincipal } = await supabase
       .from('viajes')
       .insert({
         conductor_id:     usuario.id,
-        origen:           form.origen.trim(),
-        destino:          form.destino,
+        origen,
+        destino,
         fecha:            form.fecha,
         horario:          form.horario,
         cupos:            form.cupos,
         cupos_disponibles: form.cupos,
         costo_estimado:   form.precioPorAsiento * form.cupos,
         punto_encuentro:  '',
-        notas:            notasIda || null,
+        notas:            notasViaje || (tipo === 'vuelta' ? `Vuelta desde ${form.sede}` : null),
         estado:           'publicado',
       })
       .select('id')
       .single()
 
-    if (errIda) { setError(errIda.message); setGuardando(false); return }
+    if (errPrincipal) { setError(errPrincipal.message); setGuardando(false); return }
 
-    // Viaje de vuelta (origen = sede, destino = zona del conductor)
-    if (tieneVuelta && horaVuelta) {
+    // Ida + vuelta: publicar el regreso en el mismo paso
+    if (tipo === 'ida' && tieneVuelta && horaVuelta) {
       await supabase.from('viajes').insert({
         conductor_id:     usuario.id,
-        origen:           form.destino,          // sale desde la sede
-        destino:          form.origen.trim(),    // vuelve a la zona del conductor
+        origen:           form.sede,
+        destino:          ubicacion,
         fecha:            form.fecha,
         horario:          horaVuelta,
         cupos:            form.cupos,
         cupos_disponibles: form.cupos,
         costo_estimado:   form.precioPorAsiento * form.cupos,
         punto_encuentro:  '',
-        notas:            `Vuelta de ${form.origen.trim()} → ${form.destino}`,
+        notas:            `Vuelta de ${ubicacion} → ${form.sede}`,
         estado:           'publicado',
       })
     }
@@ -104,25 +145,55 @@ export default function PublishTrip() {
 
       <form onSubmit={handleSubmit} className="screen-content">
 
-        {/* Origen */}
+        {/* Ida / Vuelta */}
+        <div className="input-group">
+          <label className="input-label">¿Qué viaje publicás?</label>
+          <div style={{ display: 'flex', gap: 8 }}>
+            {([
+              { key: 'ida' as TipoTrayecto, label: 'Ida', hint: 'Casa → UADE' },
+              { key: 'vuelta' as TipoTrayecto, label: 'Vuelta', hint: 'UADE → Casa' },
+            ]).map(t => (
+              <button
+                key={t.key}
+                type="button"
+                onClick={() => { setTipo(t.key); if (t.key === 'vuelta') setTieneVuelta(false) }}
+                style={{
+                  flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4,
+                  padding: '12px 8px', borderRadius: 'var(--radius-sm)',
+                  border: `1.5px solid ${tipo === t.key ? 'var(--blue)' : 'var(--border)'}`,
+                  background: tipo === t.key ? 'var(--blue-light)' : 'white',
+                  cursor: 'pointer', fontFamily: 'var(--font)',
+                  color: tipo === t.key ? 'var(--blue)' : 'var(--text2)',
+                }}
+              >
+                <span style={{ fontSize: 13, fontWeight: 700 }}>{t.label}</span>
+                <span style={{ fontSize: 11 }}>{t.hint}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {tipo === 'ida' ? (
+        <>
+        {/* Origen (ida) */}
         <div className="input-group">
           <label className="input-label">Zona de salida</label>
           <PlacesInput
             className="input-field"
             placeholder="Ej: Palermo, Belgrano..."
-            value={form.origen}
-            onChange={v => set('origen', v)}
+            value={form.ubicacion}
+            onChange={v => set('ubicacion', v)}
             required
           />
           <div className="chips-row" style={{ marginTop: 8 }}>
             {ZONAS_RAPIDAS.filter(z =>
-              !form.origen || z.toLowerCase().startsWith(form.origen.toLowerCase())
+              !form.ubicacion || z.toLowerCase().startsWith(form.ubicacion.toLowerCase())
             ).slice(0, 6).map(z => (
               <button
                 key={z}
                 type="button"
-                className={`chip ${form.origen === z ? 'active' : ''}`}
-                onClick={() => set('origen', z)}
+                className={`chip ${form.ubicacion === z ? 'active' : ''}`}
+                onClick={() => set('ubicacion', z)}
               >
                 {z}
               </button>
@@ -130,17 +201,47 @@ export default function PublishTrip() {
           </div>
         </div>
 
-        {/* Destino: sede */}
+        <SelectorSede
+          label="Sede UADE destino"
+          sede={form.sede}
+          onChange={s => set('sede', s)}
+        />
+        </>
+        ) : (
+        <>
+        <SelectorSede
+          label="Sede UADE de salida"
+          sede={form.sede}
+          onChange={s => set('sede', s)}
+        />
+
+        {/* Destino: zona (vuelta) */}
         <div className="input-group">
-          <label className="input-label">Sede UADE destino</label>
-          <select
+          <label className="input-label">Zona de destino</label>
+          <PlacesInput
             className="input-field"
-            value={form.destino}
-            onChange={e => set('destino', e.target.value as SedeUADE)}
-          >
-            {SEDES_UADE.map(s => <option key={s} value={s}>{s}</option>)}
-          </select>
+            placeholder="Ej: Palermo, Belgrano..."
+            value={form.ubicacion}
+            onChange={v => set('ubicacion', v)}
+            required
+          />
+          <div className="chips-row" style={{ marginTop: 8 }}>
+            {ZONAS_RAPIDAS.filter(z =>
+              !form.ubicacion || z.toLowerCase().startsWith(form.ubicacion.toLowerCase())
+            ).slice(0, 6).map(z => (
+              <button
+                key={z}
+                type="button"
+                className={`chip ${form.ubicacion === z ? 'active' : ''}`}
+                onClick={() => set('ubicacion', z)}
+              >
+                {z}
+              </button>
+            ))}
+          </div>
         </div>
+        </>
+        )}
 
         {/* Fecha + Hora */}
         <div className="row" style={{ marginBottom: 16 }}>
@@ -179,7 +280,8 @@ export default function PublishTrip() {
           </div>
         </div>
 
-        {/* ── Toggle VUELTA ───────────────────────────────────── */}
+        {/* ── Toggle VUELTA (solo en ida) ─────────────────────── */}
+        {tipo === 'ida' && (
         <div
           className="card"
           style={{
@@ -216,7 +318,7 @@ export default function PublishTrip() {
 
           {tieneVuelta && (
             <div style={{ marginTop: 14 }} onClick={e => e.stopPropagation()}>
-              <label className="input-label">Hora de salida desde {form.destino || 'la sede'}</label>
+              <label className="input-label">Hora de salida desde {form.sede || 'la sede'}</label>
               <input
                 className="input-field"
                 type="time"
@@ -225,11 +327,12 @@ export default function PublishTrip() {
                 required={tieneVuelta}
               />
               <div style={{ fontSize: 12, color: 'var(--blue)', marginTop: 5 }}>
-                Se publicará: {form.destino || 'Sede'} → {form.origen || 'Tu zona'} · {horaVuelta || '--:--'} hs
+                Se publicará: {form.sede || 'Sede'} → {form.ubicacion || 'Tu zona'} · {horaVuelta || '--:--'} hs
               </div>
             </div>
           )}
         </div>
+        )}
         {/* ─────────────────────────────────────────────────────── */}
 
         {/* Notas */}
@@ -247,11 +350,13 @@ export default function PublishTrip() {
 
         {/* Ganancia estimada */}
         <div style={{ background: 'var(--green-light)', borderRadius: 'var(--radius-sm)', padding: 14, marginBottom: 16, border: '1px solid #86EFAC' }}>
-          <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--green)', marginBottom: 4 }}>Ganancia estimada (ida)</div>
+          <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--green)', marginBottom: 4 }}>
+            Ganancia estimada ({tipo === 'vuelta' ? 'vuelta' : 'ida'})
+          </div>
           <div style={{ fontSize: 22, fontWeight: 800, color: 'var(--green)' }}>
             ${gananciaTotal} <span style={{ fontSize: 14, fontWeight: 400 }}>con {form.cupos} pasajeros</span>
           </div>
-          {tieneVuelta && (
+          {tipo === 'ida' && tieneVuelta && (
             <div style={{ fontSize: 12, color: 'var(--green)', marginTop: 4 }}>
               + ${gananciaTotal} adicionales si se llena la vuelta
             </div>
@@ -263,7 +368,9 @@ export default function PublishTrip() {
         <button className="btn btn-primary" type="submit" disabled={guardando}>
           {guardando
             ? 'Publicando...'
-            : tieneVuelta ? 'Publicar ida + vuelta →' : 'Publicar viaje →'}
+            : tipo === 'vuelta'
+              ? 'Publicar vuelta →'
+              : tieneVuelta ? 'Publicar ida + vuelta →' : 'Publicar viaje →'}
         </button>
       </form>
     </div>
