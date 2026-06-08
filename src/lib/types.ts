@@ -30,6 +30,8 @@ export type Viaje = {
   punto_encuentro: string
   notas: string | null
   estado: EstadoViaje
+  origen_lat: number | null
+  origen_lng: number | null
   created_at: string
 }
 

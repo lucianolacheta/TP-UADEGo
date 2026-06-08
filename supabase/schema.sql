@@ -43,6 +43,8 @@ create table public.viajes (
   notas text,
   estado text not null default 'publicado'
     check (estado in ('publicado','confirmado','finalizado','cancelado')),
+  origen_lat float8,
+  origen_lng float8,
   created_at timestamptz not null default now()
 );
 

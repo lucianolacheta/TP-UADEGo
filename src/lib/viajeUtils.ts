@@ -1,5 +1,20 @@
 export type FranjaHorario = '' | 'manana' | 'tarde' | 'noche'
 export type TipoTrayecto = 'ida' | 'vuelta'
+export type Coordenadas = { lat: number; lng: number }
+
+function haversineKm(a: Coordenadas, b: Coordenadas): number {
+  const R = 6371
+  const dLat = ((b.lat - a.lat) * Math.PI) / 180
+  const dLng = ((b.lng - a.lng) * Math.PI) / 180
+  const sinDLat = Math.sin(dLat / 2)
+  const sinDLng = Math.sin(dLng / 2)
+  const x =
+    sinDLat * sinDLat +
+    Math.cos((a.lat * Math.PI) / 180) *
+      Math.cos((b.lat * Math.PI) / 180) *
+      sinDLng * sinDLng
+  return R * 2 * Math.atan2(Math.sqrt(x), Math.sqrt(1 - x))
+}
 
 export const SEDES_UADE = [
   'UADE Monserrat',
@@ -21,10 +36,15 @@ export function esViajeVuelta(viaje: { origen: string; destino: string }): boole
 }
 
 /** Filtra viajes según búsqueda de ida (zona → sede) o vuelta (sede → zona). */
-export function filtrarViajesBusqueda<T extends { origen: string; destino: string; fecha: string; horario: string; conductor_id: string }>(
+export function filtrarViajesBusqueda<T extends {
+  origen: string; destino: string; fecha: string; horario: string; conductor_id: string
+  origen_lat?: number | null; origen_lng?: number | null
+}>(
   viajes: T[],
   opts: {
     zona?: string
+    coordsBusqueda?: Coordenadas | null   // coordenadas geocodificadas de la zona buscada
+    radioKm?: number                       // radio máximo en km (default 2)
     sede?: string
     turno?: FranjaHorario
     fecha?: string
@@ -33,15 +53,35 @@ export function filtrarViajesBusqueda<T extends { origen: string; destino: strin
   },
 ): T[] {
   const tipo = opts.tipo ?? 'ida'
+  const radio = opts.radioKm ?? 2
+
   let r = viajes.filter(v => v.conductor_id !== opts.excluirConductorId)
   r = r.filter(v => (tipo === 'ida' ? esViajeIda(v) : esViajeVuelta(v)))
-  if (opts.fecha) r = r.filter(v => v.fecha === opts.fecha)
+  if (opts.fecha) r = r.filter(v => v.fecha >= opts.fecha)
   if (opts.turno) r = r.filter(v => horarioEnFranja(v.horario, opts.turno!))
   if (opts.sede) {
     r = r.filter(v => (tipo === 'ida' ? v.destino === opts.sede : v.origen === opts.sede))
   }
-  if (opts.zona) {
-    r = r.filter(v => coincideZona(tipo === 'ida' ? v.origen : v.destino, opts.zona!))
+  if (opts.zona || opts.coordsBusqueda) {
+    r = r.filter(v => {
+      const campoZona = tipo === 'ida' ? v.origen : v.destino
+
+      // Si hay coords de búsqueda: modo precisión
+      if (opts.coordsBusqueda) {
+        // El viaje tiene coords → usar distancia
+        if (v.origen_lat != null && v.origen_lng != null) {
+          const distancia = haversineKm(opts.coordsBusqueda, { lat: v.origen_lat, lng: v.origen_lng })
+          return distancia <= radio
+        }
+        // Sin coords en el viaje → solo mostrar si hay match de barrio conocido (no "argentina")
+        if (opts.zona) return coincideZonaEstricto(campoZona, opts.zona)
+        return false
+      }
+
+      // Sin coords de búsqueda: matching por texto
+      if (opts.zona) return coincideZona(campoZona, opts.zona)
+      return true
+    })
   }
   return r
 }
@@ -69,20 +109,76 @@ const ZONAS_CERCANAS: Record<string, string[]> = {
   moron:         ['moron', 'castelar', 'haedo', 'ramos mejia'],
 }
 
+// Términos geográficos genéricos que no sirven para matching de barrio
+const TERMINOS_GENERICOS = new Set([
+  'argentina', 'buenos aires', 'caba', 'ciudad autónoma de buenos aires',
+  'ciudad autonoma de buenos aires', 'provincia de buenos aires',
+  'gran buenos aires', 'gba', 'conurbano',
+])
+
+/** Filtra partes de dirección que son barrios/zonas reales (no términos genéricos) */
+function partesSignificativas(texto: string): string[] {
+  return texto
+    .toLowerCase()
+    .split(',')
+    .map(p => p.trim())
+    .filter(p => p.length >= 3 && !TERMINOS_GENERICOS.has(p))
+}
+
+/** Extrae la parte principal de una dirección (antes de la coma o número de calle) */
+function normalizarZona(texto: string): string {
+  const partes = partesSignificativas(texto)
+  return partes.slice(0, 2).join(' ')
+}
+
 /** Devuelve true si el origen del viaje está en la misma zona que la búsqueda del usuario */
 export function coincideZona(origenViaje: string, busquedaUsuario: string): boolean {
   if (!busquedaUsuario.trim()) return true
-  const b = busquedaUsuario.toLowerCase().trim()
-  const o = origenViaje.toLowerCase().trim()
+  const b = normalizarZona(busquedaUsuario)
+  const o = normalizarZona(origenViaje)
+  if (!b) return false
 
   // Match exacto o substring directo
   if (o.includes(b) || b.includes(o)) return true
 
+  // Match contra partes significativas
+  const bPartes = partesSignificativas(busquedaUsuario)
+  const oPartes = partesSignificativas(origenViaje)
+  for (const bp of bPartes) {
+    for (const op of oPartes) {
+      if (op.includes(bp) || bp.includes(op)) return true
+    }
+  }
+
   // Buscar la clave de zona que mejor matchea la búsqueda
   for (const [clave, vecinos] of Object.entries(ZONAS_CERCANAS)) {
-    const esBusqueda = clave.includes(b) || b.includes(clave)
-    if (esBusqueda && vecinos.some(v => o.includes(v) || v.includes(o.split(',')[0].trim()))) {
-      return true
+    const esBusqueda = bPartes.some(p => clave.includes(p) || p.includes(clave))
+    if (esBusqueda) {
+      const oPrincipal = oPartes[0] ?? o
+      if (vecinos.some(v => oPrincipal.includes(v) || v.includes(oPrincipal))) return true
+    }
+  }
+  return false
+}
+
+/**
+ * Versión estricta: solo matchea si hay coincidencia real de barrio.
+ * Se usa como fallback cuando hay coords de búsqueda pero el viaje no tiene coords.
+ */
+function coincideZonaEstricto(origenViaje: string, busquedaUsuario: string): boolean {
+  const bPartes = partesSignificativas(busquedaUsuario)
+  const oPartes = partesSignificativas(origenViaje)
+  if (!bPartes.length || !oPartes.length) return false
+
+  for (const bp of bPartes) {
+    for (const op of oPartes) {
+      if (op.includes(bp) || bp.includes(op)) return true
+    }
+  }
+  // Solo vecinos directos del ZONAS_CERCANAS (sin expansión)
+  for (const [clave, vecinos] of Object.entries(ZONAS_CERCANAS)) {
+    if (bPartes.some(p => p === clave || clave === p)) {
+      if (oPartes.some(op => vecinos.includes(op))) return true
     }
   }
   return false

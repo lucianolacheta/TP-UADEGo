@@ -3,7 +3,8 @@ import { useNavigate, useSearchParams } from 'react-router-dom'
 import { IconArrowLeft, IconCurrencyDollar, IconStar } from '@tabler/icons-react'
 import type { ViajeConConductor } from '../lib/types'
 import { getViajesDisponibles } from '../services/viajesService'
-import { filtrarViajesBusqueda, type FranjaHorario, type TipoTrayecto } from '../lib/viajeUtils'
+import { filtrarViajesBusqueda, type FranjaHorario, type TipoTrayecto, type Coordenadas } from '../lib/viajeUtils'
+import { coordsOrigen, coordsPorTexto } from '../lib/googleMaps'
 import { useAuth } from '../contexts/AuthContext'
 import RideCard from '../components/ui/RideCard'
 import EmptyState from '../components/ui/EmptyState'
@@ -18,6 +19,10 @@ export default function Results() {
   const sede   = params.get('sede')  ?? ''
   const turno  = (params.get('turno') ?? '') as FranjaHorario
   const fecha  = params.get('fecha') ?? ''
+  const latParam = params.get('lat')
+  const lngParam = params.get('lng')
+  const coordsBusqueda: Coordenadas | null =
+    latParam && lngParam ? { lat: parseFloat(latParam), lng: parseFloat(lngParam) } : null
 
   const [viajes, setViajes] = useState<ViajeConConductor[]>([])
   const [loading, setLoading] = useState(true)
@@ -25,15 +30,37 @@ export default function Results() {
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    getViajesDisponibles()
-      .then(vs => {
+    async function cargar() {
+      try {
+        let vs = await getViajesDisponibles()
+
+        // Si hay búsqueda por coords, geocodificar los viajes que no tienen coords guardadas
+        if (coordsBusqueda) {
+          vs = await Promise.all(vs.map(async v => {
+            if (v.origen_lat != null && v.origen_lng != null) return v
+            // Intentar con el diccionario local primero (sin red)
+            const local = coordsPorTexto(v.origen)
+            if (local) return { ...v, origen_lat: local.lat, origen_lng: local.lng }
+            // Fallback: Nominatim (OpenStreetMap, gratis)
+            const remote = await coordsOrigen(v.origen).catch(() => null)
+            if (remote) return { ...v, origen_lat: remote.lat, origen_lng: remote.lng }
+            return v
+          }))
+        }
+
         setViajes(filtrarViajesBusqueda(vs, {
-          zona, sede, turno, fecha, tipo, excluirConductorId: usuario?.id,
+          zona, coordsBusqueda, sede, turno, fecha, tipo,
+          excluirConductorId: usuario?.id,
+          radioKm: 2,
         }))
-      })
-      .catch(() => setError('No se pudieron cargar los viajes.'))
-      .finally(() => setLoading(false))
-  }, [zona, sede, turno, fecha, tipo, usuario?.id])
+      } catch {
+        setError('No se pudieron cargar los viajes.')
+      } finally {
+        setLoading(false)
+      }
+    }
+    void cargar()
+  }, [zona, coordsBusqueda?.lat, coordsBusqueda?.lng, sede, turno, fecha, tipo, usuario?.id])
 
   const ordenados = [...viajes].sort((a, b) => {
     if (orden === 'precio') return a.costo_estimado - b.costo_estimado
@@ -43,9 +70,9 @@ export default function Results() {
 
   const subtitulo = [
     tipo === 'vuelta' ? 'Vuelta' : 'Ida',
-    zona || 'Cualquier zona',
-    sede || 'UADE',
-    fecha,
+    zona ? `${zona}${coordsBusqueda ? ' (±2 km)' : ''}` : 'Cualquier zona',
+    sede || 'Todas las sedes',
+    fecha ? `desde ${fecha}` : '',
   ].filter(Boolean).join(' · ')
 
   return (

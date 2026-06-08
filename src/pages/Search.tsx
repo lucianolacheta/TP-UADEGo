@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { IconArrowLeft, IconMapPin, IconSchool, IconSun, IconMoon, IconCloud } from '@tabler/icons-react'
 import { SEDES_UADE, type SedeUADE, type FranjaHorario, type TipoTrayecto } from '../lib/viajeUtils'
+import { coordsOrigen, coordsPorTexto } from '../lib/googleMaps'
 import PlacesInput from '../components/ui/PlacesInput'
 
 const ZONAS_RAPIDAS = [
@@ -21,17 +22,32 @@ export default function Search() {
   const nav = useNavigate()
   const [tipo, setTipo] = useState<TipoTrayecto>('ida')
   const [zona, setZona] = useState('')
-  const [sede, setSede] = useState<SedeUADE>(SEDES_UADE[0])
+  const [sede, setSede] = useState<SedeUADE | ''>('')
   const [turno, setTurno] = useState<FranjaHorario>('')
   const [fecha, setFecha] = useState(new Date().toISOString().split('T')[0])
+  const [buscando, setBuscando] = useState(false)
 
-  function buscar() {
+  async function buscar() {
+    setBuscando(true)
     const params = new URLSearchParams()
     params.set('tipo', tipo)
     if (zona) params.set('zona', zona)
-    params.set('sede', sede)
+    if (sede) params.set('sede', sede)
     if (turno) params.set('turno', turno)
     params.set('fecha', fecha)
+
+    // Geocodificar zona para búsqueda por proximidad
+    if (zona.trim()) {
+      try {
+        const coords = coordsPorTexto(zona) ?? await coordsOrigen(zona)
+        if (coords) {
+          params.set('lat', String(coords.lat))
+          params.set('lng', String(coords.lng))
+        }
+      } catch { /* sin coords, usa fallback texto */ }
+    }
+
+    setBuscando(false)
     nav(`/resultados?${params.toString()}`)
   }
 
@@ -104,13 +120,13 @@ export default function Search() {
 
         {/* Sede destino (ida) */}
         <div className="input-group">
-          <label className="input-label">Sede UADE de destino</label>
+          <label className="input-label">Sede UADE de destino <span style={{ color: 'var(--text3)', fontWeight: 400 }}>(todas si no elegís)</span></label>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
             {SEDES_UADE.map(s => (
               <button
                 key={s}
                 type="button"
-                onClick={() => setSede(s)}
+                onClick={() => setSede(prev => prev === s ? '' : s)}
                 style={{
                   display: 'flex', alignItems: 'center', gap: 12,
                   padding: '12px 16px', borderRadius: 'var(--radius-sm)',
@@ -130,13 +146,13 @@ export default function Search() {
         <>
         {/* Sede origen (vuelta) */}
         <div className="input-group">
-          <label className="input-label">¿Desde qué sede salís?</label>
+          <label className="input-label">Sede UADE de salida <span style={{ color: 'var(--text3)', fontWeight: 400 }}>(todas si no elegís)</span></label>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
             {SEDES_UADE.map(s => (
               <button
                 key={s}
                 type="button"
-                onClick={() => setSede(s)}
+                onClick={() => setSede(prev => prev === s ? '' : s)}
                 style={{
                   display: 'flex', alignItems: 'center', gap: 12,
                   padding: '12px 16px', borderRadius: 'var(--radius-sm)',
@@ -211,11 +227,13 @@ export default function Search() {
 
         {/* Fecha */}
         <div className="input-group">
-          <label className="input-label">Fecha</label>
+          <label className="input-label">Desde fecha <span style={{ color: 'var(--text3)', fontWeight: 400 }}>(muestra viajes a partir de este día)</span></label>
           <input className="input-field" type="date" value={fecha} onChange={e => setFecha(e.target.value)} />
         </div>
 
-        <button className="btn btn-primary" onClick={buscar}>Buscar viajes →</button>
+        <button className="btn btn-primary" onClick={buscar} disabled={buscando}>
+          {buscando ? 'Buscando...' : 'Buscar viajes →'}
+        </button>
 
         {/* Búsquedas frecuentes */}
         <div style={{ marginTop: 24 }}>

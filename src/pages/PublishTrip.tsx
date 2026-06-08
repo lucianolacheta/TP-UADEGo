@@ -4,6 +4,7 @@ import { IconArrowLeft } from '@tabler/icons-react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
 import { SEDES_UADE, type SedeUADE, type TipoTrayecto } from '../lib/viajeUtils'
+import { coordsOrigen, coordsPorTexto } from '../lib/googleMaps'
 import SeatSelector from '../components/ui/SeatSelector'
 import PlacesInput from '../components/ui/PlacesInput'
 
@@ -90,6 +91,11 @@ export default function PublishTrip() {
     const origen = tipo === 'ida' ? ubicacion : form.sede
     const destino = tipo === 'ida' ? form.sede : ubicacion
 
+    // Geocodificar origen para habilitar búsqueda por radio
+    const coordsInput = coordsPorTexto(ubicacion) ?? await coordsOrigen(ubicacion).catch(() => null)
+    const origenLat = tipo === 'ida' ? coordsInput?.lat ?? null : null
+    const origenLng = tipo === 'ida' ? coordsInput?.lng ?? null : null
+
     const notasViaje = [
       form.notas || null,
       tipo === 'ida' && tieneVuelta ? `Vuelta: ${horaVuelta} hs desde ${form.sede}` : null,
@@ -109,6 +115,8 @@ export default function PublishTrip() {
         punto_encuentro:  '',
         notas:            notasViaje || (tipo === 'vuelta' ? `Vuelta desde ${form.sede}` : null),
         estado:           'publicado',
+        origen_lat:       origenLat,
+        origen_lng:       origenLng,
       })
       .select('id')
       .single()
@@ -129,6 +137,8 @@ export default function PublishTrip() {
         punto_encuentro:  '',
         notas:            `Vuelta de ${ubicacion} → ${form.sede}`,
         estado:           'publicado',
+        origen_lat:       null,
+        origen_lng:       null,
       })
     }
 
