@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { IconArrowLeft, IconMapPin, IconSchool, IconSun, IconMoon, IconCloud } from '@tabler/icons-react'
 import { SEDES_UADE, type SedeUADE, type FranjaHorario, type TipoTrayecto } from '../lib/viajeUtils'
-import { coordsOrigen, coordsPorTexto } from '../lib/googleMaps'
+import { geocodificar } from '../lib/googleMaps'
 import PlacesInput from '../components/ui/PlacesInput'
 
 const ZONAS_RAPIDAS = [
@@ -39,12 +39,12 @@ export default function Search() {
     // Geocodificar zona para búsqueda por proximidad
     if (zona.trim()) {
       try {
-        const coords = coordsPorTexto(zona) ?? await coordsOrigen(zona)
+        const coords = await geocodificar(zona)
         if (coords) {
           params.set('lat', String(coords.lat))
           params.set('lng', String(coords.lng))
         }
-      } catch { /* sin coords, usa fallback texto */ }
+      } catch { /* sin coords, búsqueda sin radio */ }
     }
 
     setBuscando(false)

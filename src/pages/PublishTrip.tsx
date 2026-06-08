@@ -4,7 +4,7 @@ import { IconArrowLeft } from '@tabler/icons-react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
 import { SEDES_UADE, type SedeUADE, type TipoTrayecto } from '../lib/viajeUtils'
-import { coordsOrigen, coordsPorTexto } from '../lib/googleMaps'
+import { geocodificar } from '../lib/googleMaps'
 import SeatSelector from '../components/ui/SeatSelector'
 import PlacesInput from '../components/ui/PlacesInput'
 
@@ -92,9 +92,9 @@ export default function PublishTrip() {
     const destino = tipo === 'ida' ? form.sede : ubicacion
 
     // Geocodificar origen para habilitar búsqueda por radio
-    const coordsInput = coordsPorTexto(ubicacion) ?? await coordsOrigen(ubicacion).catch(() => null)
-    const origenLat = tipo === 'ida' ? coordsInput?.lat ?? null : null
-    const origenLng = tipo === 'ida' ? coordsInput?.lng ?? null : null
+    const coordsInput = tipo === 'ida' ? await geocodificar(ubicacion).catch(() => null) : null
+    const origenLat = coordsInput?.lat ?? null
+    const origenLng = coordsInput?.lng ?? null
 
     const notasViaje = [
       form.notas || null,
