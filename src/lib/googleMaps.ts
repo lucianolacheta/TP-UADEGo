@@ -14,52 +14,72 @@ export interface SugerenciaLugar {
   fullText: string
 }
 
-/** Autocomplete con Places API (New) — la legacy no está habilitada en proyectos nuevos. */
+/** Autocomplete usando OpenStreetMap Nominatim (gratis, sin API key). */
 export async function buscarSugerenciasLugar(input: string): Promise<SugerenciaLugar[]> {
-  if (!API_KEY || input.trim().length < 2) return []
+  if (input.trim().length < 3) return []
 
   try {
-    const res = await fetch('https://places.googleapis.com/v1/places:autocomplete', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-Goog-Api-Key': API_KEY,
-      },
-      body: JSON.stringify({
-        input: input.trim(),
-        includedRegionCodes: ['ar'],
-        languageCode: 'es',
-      }),
-    })
+    const url = new URL('https://nominatim.openstreetmap.org/search')
+    url.searchParams.set('q', `${input.trim()}, Argentina`)
+    url.searchParams.set('format', 'json')
+    url.searchParams.set('limit', '6')
+    url.searchParams.set('countrycodes', 'ar')
+    url.searchParams.set('addressdetails', '1')
+    url.searchParams.set('accept-language', 'es')
 
+    const res = await fetch(url.toString(), {
+      headers: {
+        'Accept': 'application/json',
+        'Accept-Language': 'es',
+        'User-Agent': 'UADECarPool/1.0 (demo universitaria)',
+      },
+    })
     if (!res.ok) return []
 
-    const data = await res.json() as {
-      suggestions?: Array<{
-        placePrediction?: {
-          placeId?: string
-          text?: { text?: string }
-          structuredFormat?: {
-            mainText?: { text?: string }
-            secondaryText?: { text?: string }
-          }
-        }
-      }>
-    }
+    const data = await res.json() as Array<{
+      place_id: number
+      display_name: string
+      lat: string
+      lon: string
+      address?: {
+        neighbourhood?: string
+        suburb?: string
+        city_district?: string
+        town?: string
+        city?: string
+        state?: string
+        road?: string
+        house_number?: string
+      }
+    }>
 
-    return (data.suggestions ?? [])
-      .slice(0, 5)
-      .map(s => {
-        const p = s.placePrediction
-        if (!p?.placeId) return null
+    return data
+      .filter(r => r.display_name)
+      .map(r => {
+        const addr = r.address ?? {}
+        const barrio = addr.neighbourhood ?? addr.suburb ?? addr.city_district ?? addr.town ?? ''
+        const ciudad = addr.city ?? addr.state ?? ''
+        const calle = addr.road
+          ? `${addr.road}${addr.house_number ? ' ' + addr.house_number : ''}`
+          : ''
+
+        const mainText = calle || barrio || input
+        const secondaryText = [barrio, ciudad].filter(Boolean).join(', ')
+        // fullText: versión corta legible (sin "Argentina" repetida)
+        const fullText = [calle, barrio, ciudad]
+          .filter(Boolean)
+          .filter((v, i, arr) => arr.indexOf(v) === i)
+          .join(', ')
+
         return {
-          placeId: p.placeId,
-          mainText: p.structuredFormat?.mainText?.text ?? p.text?.text ?? '',
-          secondaryText: p.structuredFormat?.secondaryText?.text ?? '',
-          fullText: p.text?.text ?? '',
+          placeId: String(r.place_id),
+          mainText,
+          secondaryText,
+          fullText: fullText || r.display_name.split(',').slice(0, 3).join(',').trim(),
         }
       })
-      .filter((s): s is SugerenciaLugar => !!s && !!s.fullText)
+      .filter(s => s.fullText)
+      .slice(0, 5)
   } catch {
     return []
   }
