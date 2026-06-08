@@ -75,16 +75,16 @@ export default function Profile() {
 
       <div className="screen-content">
         {/* Stats */}
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10, margin: '16px 0' }}>
-          <div style={{ background: 'white', borderRadius: 'var(--radius-sm)', border: '1.5px solid var(--border)', padding: 12, textAlign: 'center' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10, margin: '16px 0 20px' }}>
+          <div className="stat-card">
             <div style={{ fontSize: 24, fontWeight: 800, color: 'var(--text)' }}>0</div>
             <div style={{ fontSize: 11, color: 'var(--text2)' }}>Viajes</div>
           </div>
-          <div style={{ background: 'white', borderRadius: 'var(--radius-sm)', border: '1.5px solid var(--border)', padding: 12, textAlign: 'center' }}>
+          <div className="stat-card">
             <div style={{ fontSize: 24, fontWeight: 800, color: 'var(--text)' }}>{usuario.rating.toFixed(1)}</div>
             <div style={{ fontSize: 11, color: 'var(--text2)' }}>Calificación</div>
           </div>
-          <div style={{ background: 'white', borderRadius: 'var(--radius-sm)', border: '1.5px solid var(--border)', padding: 12, textAlign: 'center' }}>
+          <div className="stat-card">
             <div style={{ fontSize: 24, fontWeight: 800, color: 'var(--green)' }}>0</div>
             <div style={{ fontSize: 11, color: 'var(--text2)' }}>kg CO₂ 🌱</div>
           </div>
@@ -116,24 +116,26 @@ export default function Profile() {
         ) : (
           <div className="card">
             <div className="section-title">Información</div>
-            {usuario.zona && (
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 10 }}>
-                <span style={{ fontSize: 13, color: 'var(--text2)' }}>Zona</span>
-                <span style={{ fontSize: 14, fontWeight: 600 }}>{usuario.zona}</span>
-              </div>
-            )}
-            {usuario.horario_habitual && (
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 10 }}>
-                <span style={{ fontSize: 13, color: 'var(--text2)' }}>Turno</span>
-                <span style={{ fontSize: 14, fontWeight: 600 }}>{usuario.horario_habitual}</span>
-              </div>
-            )}
-            {usuario.telefono && (
-              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                <span style={{ fontSize: 13, color: 'var(--text2)' }}>Teléfono</span>
-                <span style={{ fontSize: 14, fontWeight: 600 }}>{usuario.telefono}</span>
-              </div>
-            )}
+            <div className="info-list">
+              {usuario.zona && (
+                <div className="info-row">
+                  <span className="info-label">Zona</span>
+                  <span className="info-value">{usuario.zona}</span>
+                </div>
+              )}
+              {usuario.horario_habitual && (
+                <div className="info-row">
+                  <span className="info-label">Turno</span>
+                  <span className="info-value">{usuario.horario_habitual}</span>
+                </div>
+              )}
+              {usuario.telefono && (
+                <div className="info-row">
+                  <span className="info-label">Teléfono</span>
+                  <span className="info-value">{usuario.telefono}</span>
+                </div>
+              )}
+            </div>
           </div>
         )}
 

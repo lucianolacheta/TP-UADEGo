@@ -78,7 +78,7 @@ export default function MisViajes() {
       </div>
 
       {/* Tabs activos / historial */}
-      <div style={{ display: 'flex', gap: 0, margin: '0 20px 16px', background: 'var(--bg)', borderRadius: 'var(--radius-sm)', padding: 4 }}>
+      <div className="tabs-switcher">
         {(['activos', 'historial'] as const).map(t => (
           <button
             key={t}
@@ -88,7 +88,7 @@ export default function MisViajes() {
               fontFamily: 'var(--font)', fontSize: 14, fontWeight: 700,
               background: tab === t ? 'white' : 'transparent',
               color: tab === t ? 'var(--blue)' : 'var(--text2)',
-              boxShadow: tab === t ? '0 1px 4px rgba(0,0,0,0.08)' : 'none',
+              boxShadow: tab === t ? '0 1px 4px rgba(0,0,0,0.1)' : 'none',
               transition: 'all 0.15s',
             }}
           >
@@ -114,7 +114,7 @@ export default function MisViajes() {
 
             {/* Viajes confirmados como pasajero */}
             {solicActivas.length > 0 && (
-              <div style={{ marginBottom: 20 }}>
+              <div className="section-block">
                 <div className="section-title">✅ Confirmados — soy pasajero</div>
                 {solicActivas.map(s => (
                   <ViajeCard
@@ -130,7 +130,7 @@ export default function MisViajes() {
 
             {/* Solicitudes pendientes como pasajero */}
             {solicPendientes.length > 0 && (
-              <div style={{ marginBottom: 20 }}>
+              <div className="section-block">
                 <div className="section-title">⏳ Esperando respuesta</div>
                 {solicPendientes.map(s => (
                   <ViajeCard
@@ -145,7 +145,7 @@ export default function MisViajes() {
 
             {/* Mis viajes publicados como conductor */}
             {viajesActivos.length > 0 && (
-              <div style={{ marginBottom: 20 }}>
+              <div className="section-block">
                 <div className="section-title">🚗 Publicados — soy conductor</div>
                 {viajesActivos.map(v => (
                   <ViajeCard
@@ -184,7 +184,7 @@ export default function MisViajes() {
             )}
 
             {viajesHistorial.length > 0 && (
-              <div style={{ marginBottom: 20 }}>
+              <div className="section-block">
                 <div className="section-title" style={{ color: 'var(--text2)' }}>Viajes publicados (pasados)</div>
                 {viajesHistorial.map(v => (
                   <ViajeCard
@@ -203,7 +203,7 @@ export default function MisViajes() {
             )}
 
             {solicHistorial.length > 0 && (
-              <div style={{ marginBottom: 20 }}>
+              <div className="section-block">
                 <div className="section-title" style={{ color: 'var(--text2)' }}>Viajes como pasajero (pasados)</div>
                 {solicHistorial.map(s => (
                   <ViajeCard
