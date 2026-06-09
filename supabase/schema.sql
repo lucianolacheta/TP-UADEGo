@@ -120,12 +120,22 @@ returns trigger
 language plpgsql
 as $$
 begin
-  if new.estado = 'aceptada' and (old.estado is null or old.estado <> 'aceptada') then
+  -- Aceptar solicitud: descontar cupo
+  if new.estado = 'aceptada' and old.estado <> 'aceptada' then
     update public.viajes
       set cupos_disponibles = cupos_disponibles - 1,
           estado = case when cupos_disponibles - 1 = 0 then 'confirmado' else estado end
       where id = new.viaje_id and cupos_disponibles > 0;
     new.fecha_respuesta := now();
+
+  -- Cancelar o rechazar una solicitud que estaba aceptada: devolver cupo
+  elsif old.estado = 'aceptada' and new.estado in ('cancelada', 'rechazada') then
+    update public.viajes
+      set cupos_disponibles = cupos_disponibles + 1,
+          estado = case when estado = 'confirmado' then 'publicado' else estado end
+      where id = new.viaje_id;
+    new.fecha_respuesta := now();
+
   elsif new.estado = 'rechazada' and old.estado <> 'rechazada' then
     new.fecha_respuesta := now();
   end if;

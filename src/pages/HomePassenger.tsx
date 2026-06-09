@@ -4,14 +4,6 @@ import { useAuth } from '../contexts/AuthContext'
 import RideCard from '../components/ui/RideCard'
 import type { ViajeConConductor } from '../lib/types'
 import { getViajesDisponibles } from '../services/viajesService'
-import { horarioEnFranja, type FranjaHorario } from '../lib/viajeUtils'
-
-const FILTROS: { key: FranjaHorario; label: string }[] = [
-  { key: '', label: 'Todos' },
-  { key: 'manana', label: 'Mañana' },
-  { key: 'tarde', label: 'Tarde' },
-  { key: 'noche', label: 'Noche' },
-]
 
 function saludo() {
   const h = new Date().getHours()
@@ -29,7 +21,6 @@ export default function HomePassenger() {
   const { usuario } = useAuth()
   const [viajes, setViajes] = useState<ViajeConConductor[]>([])
   const [loading, setLoading] = useState(true)
-  const [filtro, setFiltro] = useState<FranjaHorario>('')
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
@@ -41,7 +32,6 @@ export default function HomePassenger() {
 
   // No mostrar viajes propios
   const ajenos = viajes.filter(v => v.conductor_id !== usuario?.id)
-  const filtrados = ajenos.filter(v => horarioEnFranja(v.horario, filtro))
   const proxima = ajenos[0]?.horario.slice(0, 5) ?? '--:--'
 
   return (
@@ -97,15 +87,6 @@ export default function HomePassenger() {
           <div style={{ background: 'rgba(255,255,255,0.2)', borderRadius: 8, padding: '6px 12px', fontSize: 13, fontWeight: 700, color: 'white' }}>+ Publicar</div>
         </div>
 
-        {/* Filtros por turno */}
-        <div className="chips-row" style={{ marginBottom: 12 }}>
-          {FILTROS.map(f => (
-            <button key={f.key} className={`chip ${filtro === f.key ? 'active' : ''}`} onClick={() => setFiltro(f.key)}>
-              {f.label}
-            </button>
-          ))}
-        </div>
-
         <div style={{ fontSize: 16, fontWeight: 700, color: 'var(--text)', marginBottom: 10 }}>Viajes disponibles</div>
 
         {loading && (
@@ -120,14 +101,14 @@ export default function HomePassenger() {
           </div>
         )}
         {error && <p style={{ color: 'var(--danger)', fontSize: 14 }}>{error}</p>}
-        {!loading && !error && filtrados.length === 0 && (
+        {!loading && !error && ajenos.length === 0 && (
           <div style={{ textAlign: 'center', padding: '32px 0', color: 'var(--text2)' }}>
             <div style={{ fontSize: 40, marginBottom: 12 }}>🚗</div>
             <div style={{ fontWeight: 700, marginBottom: 6 }}>Sin viajes en este horario</div>
             <div style={{ fontSize: 13 }}>Probá otro filtro o buscá por zona</div>
           </div>
         )}
-        {filtrados.map(v => <RideCard key={v.id} viaje={v} />)}
+        {ajenos.map(v => <RideCard key={v.id} viaje={v} />)}
       </div>
     </>
   )

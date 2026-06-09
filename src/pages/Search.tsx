@@ -12,10 +12,10 @@ const ZONAS_RAPIDAS = [
   'Lanús', 'Avellaneda', 'Quilmes', 'San Justo', 'Mataderos',
 ]
 
-const TURNOS: { key: FranjaHorario; label: string; icon: React.ReactNode; hint: string }[] = [
-  { key: 'manana', label: 'Mañana', icon: <IconSun size={20} />, hint: 'Hasta las 12 hs' },
-  { key: 'tarde',  label: 'Tarde',  icon: <IconCloud size={20} />, hint: '12 a 18 hs' },
-  { key: 'noche',  label: 'Noche',  icon: <IconMoon size={20} />, hint: 'Después de 18 hs' },
+const TURNOS: { key: FranjaHorario; label: string; icon: React.ReactNode; ida: string; vuelta: string }[] = [
+  { key: 'manana', label: 'Mañana', icon: <IconSun size={20} />,   ida: '~8:00 hs',   vuelta: '~12:00 hs' },
+  { key: 'tarde',  label: 'Tarde',  icon: <IconCloud size={20} />, ida: '~13:45 hs',  vuelta: '~17:45 hs' },
+  { key: 'noche',  label: 'Noche',  icon: <IconMoon size={20} />,  ida: '~18:30 hs',  vuelta: '~22:00 hs' },
 ]
 
 export default function Search() {
@@ -81,7 +81,7 @@ export default function Search() {
                 }}
               >
                 <span style={{ fontSize: 13, fontWeight: 700 }}>{t.label}</span>
-                <span style={{ fontSize: 11 }}>{t.hint}</span>
+                <span style={{ fontSize: 11 }}>{tipo === 'vuelta' ? t.vuelta : t.ida}</span>
               </button>
             ))}
           </div>
@@ -218,7 +218,7 @@ export default function Search() {
               >
                 {t.icon}
                 <span style={{ fontSize: 13, fontWeight: 700 }}>{t.label}</span>
-                <span style={{ fontSize: 11 }}>{t.hint}</span>
+                <span style={{ fontSize: 11 }}>{tipo === 'vuelta' ? t.vuelta : t.ida}</span>
               </button>
             ))}
           </div>

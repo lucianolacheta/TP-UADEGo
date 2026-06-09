@@ -58,7 +58,7 @@ export function filtrarViajesBusqueda<T extends {
   let r = viajes.filter(v => v.conductor_id !== opts.excluirConductorId)
   r = r.filter(v => (tipo === 'ida' ? esViajeIda(v) : esViajeVuelta(v)))
   if (opts.fecha) r = r.filter(v => v.fecha >= opts.fecha)
-  if (opts.turno) r = r.filter(v => horarioEnFranja(v.horario, opts.turno!))
+  if (opts.turno) r = r.filter(v => horarioEnFranja(v.horario, opts.turno!, tipo))
   if (opts.sede) {
     r = r.filter(v => (tipo === 'ida' ? v.destino === opts.sede : v.origen === opts.sede))
   }
@@ -189,11 +189,37 @@ export function costoPorPersona(costo: number, cupos: number): number {
   return Math.round(costo / cupos)
 }
 
-export function horarioEnFranja(horario: string, franja: FranjaHorario): boolean {
+function toMin(hhmm: string): number {
+  const [h, m] = hhmm.split(':').map(Number)
+  return (h ?? 0) * 60 + (m ?? 0)
+}
+
+function enVentana(horario: string, referencia: string, margen = 45): boolean {
+  const v = toMin(horario.slice(0, 5))
+  const r = toMin(referencia)
+  return v >= r - margen && v <= r + margen
+}
+
+/**
+ * Clases UADE: 8:00 (mañana) · 13:45 (tarde) · 18:30 (noche)
+ * Ida  = viaje hacia UADE  → llegar antes del inicio
+ * Vuelta = viaje desde UADE → salir después del fin (fin ≈ inicio + 4hs aprox)
+ *   Mañana vuelta: ~12:00  Tarde vuelta: ~17:45  Noche vuelta: ~22:00
+ */
+export function horarioEnFranja(
+  horario: string,
+  franja: FranjaHorario,
+  tipo: TipoTrayecto = 'ida',
+): boolean {
   if (!franja) return true
-  const h = parseInt(horario.slice(0, 2), 10)
-  if (Number.isNaN(h)) return true
-  if (franja === 'manana') return h < 12
-  if (franja === 'tarde') return h >= 12 && h < 18
-  return h >= 18
+  if (tipo === 'ida') {
+    if (franja === 'manana') return enVentana(horario, '08:00')
+    if (franja === 'tarde')  return enVentana(horario, '13:45')
+    if (franja === 'noche')  return enVentana(horario, '18:30')
+  } else {
+    if (franja === 'manana') return enVentana(horario, '12:00')
+    if (franja === 'tarde')  return enVentana(horario, '17:45')
+    if (franja === 'noche')  return enVentana(horario, '22:00')
+  }
+  return true
 }
