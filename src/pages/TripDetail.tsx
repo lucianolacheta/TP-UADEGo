@@ -210,6 +210,13 @@ export default function TripDetail() {
                 <p style={{ color: 'var(--green)', fontWeight: 700, marginBottom: 6 }}>¡Viaje confirmado! 🎉</p>
                 <p style={{ fontSize: 14 }}><strong>Encontrate en:</strong> {viaje.punto_encuentro}</p>
                 <p style={{ fontSize: 14, marginTop: 4 }}><strong>Aportá aprox.:</strong> ${porPersona}</p>
+                <button
+                  className="btn btn-primary btn-sm"
+                  style={{ marginTop: 12 }}
+                  onClick={() => nav(`/chat/${solicitudPropia.id}`)}
+                >
+                  💬 Chatear con el conductor
+                </button>
               </>
             )}
             {(solicitudPropia.estado === 'pendiente' || solicitudPropia.estado === 'aceptada') && (
@@ -307,6 +314,9 @@ export default function TripDetail() {
                 <StatusPill estado={s.estado} />
                 {s.estado === 'pendiente' && (
                   <button className="btn btn-green btn-sm" onClick={() => nav(`/solicitud/${s.id}`)}>Gestionar</button>
+                )}
+                {s.estado === 'aceptada' && (
+                  <button className="btn btn-primary btn-sm" onClick={() => nav(`/chat/${s.id}`)}>💬 Chat</button>
                 )}
               </div>
             </div>

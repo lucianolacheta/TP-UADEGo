@@ -4,6 +4,7 @@
 -- =====================================================
 
 -- Limpieza (solo dev, comentar en prod)
+drop table if exists public.mensajes cascade;
 drop table if exists public.calificaciones cascade;
 drop table if exists public.solicitudes cascade;
 drop table if exists public.viajes cascade;
@@ -84,6 +85,25 @@ create table public.calificaciones (
   created_at timestamptz not null default now(),
   unique (viaje_id, evaluador_id, evaluado_id)
 );
+
+-- =====================================================
+-- mensajes
+-- Chat entre pasajero y conductor de una solicitud aceptada.
+-- La "conversación" es la solicitud (única por viaje_id + pasajero_id).
+-- =====================================================
+create table public.mensajes (
+  id uuid primary key default gen_random_uuid(),
+  solicitud_id uuid not null references public.solicitudes(id) on delete cascade,
+  emisor_id    uuid not null references public.usuarios(id) on delete cascade,
+  texto        text not null check (char_length(texto) between 1 and 1000),
+  created_at   timestamptz not null default now()
+);
+
+create index idx_mensajes_solicitud on public.mensajes(solicitud_id);
+create index idx_mensajes_created on public.mensajes(created_at);
+
+-- Realtime: que el cliente reciba los INSERT en vivo
+alter publication supabase_realtime add table public.mensajes;
 
 -- =====================================================
 -- Trigger: crear fila en usuarios cuando nace en auth.users

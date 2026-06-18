@@ -1,17 +1,39 @@
+import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { useAuth } from '../contexts/AuthContext'
+import type { ConversacionResumen } from '../lib/types'
+import { getConversaciones } from '../services/mensajesService'
 import EmptyState from '../components/ui/EmptyState'
-
-const CONVERSACIONES_DEMO = [
-  { id: '1', nombre: 'Martín Hacker', ultimo: 'Estoy en camino, 5 minutos...', hora: '21:28', noLeidos: 2, color: '#FFF0EB', textColor: '#FF6B35' },
-  { id: '2', nombre: 'Sofía Canzian', ultimo: 'Viaje confirmado para el jueves', hora: 'Lun', noLeidos: 0, color: '#DCFCE7', textColor: '#16A34A' },
-]
 
 function iniciales(nombre: string) {
   return nombre.split(' ').map(p => p[0]).slice(0, 2).join('').toUpperCase()
 }
 
+function horaCorta(iso: string) {
+  const d = new Date(iso)
+  const hoy = new Date()
+  const mismoDia = d.toDateString() === hoy.toDateString()
+  return mismoDia
+    ? d.toLocaleTimeString('es', { hour: '2-digit', minute: '2-digit' })
+    : d.toLocaleDateString('es', { day: '2-digit', month: '2-digit' })
+}
+
 export default function Messages() {
   const nav = useNavigate()
+  const { usuario } = useAuth()
+  const [convs, setConvs] = useState<ConversacionResumen[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (!usuario) return
+    setLoading(true)
+    getConversaciones(usuario.id)
+      .then(setConvs)
+      .catch(() => setError('No se pudieron cargar las conversaciones.'))
+      .finally(() => setLoading(false))
+  }, [usuario])
+
   return (
     <div className="screen">
       <div className="screen-header" style={{ paddingTop: 48 }}>
@@ -19,34 +41,34 @@ export default function Messages() {
       </div>
 
       <div className="screen-content">
-        {CONVERSACIONES_DEMO.length === 0 ? (
-          <EmptyState emoji="💬" titulo="Sin conversaciones" subtitulo="Cuando solicites o aceptes un viaje, podés coordinar por acá." />
+        {error && <p style={{ color: 'var(--danger)', marginBottom: 12 }}>{error}</p>}
+
+        {loading ? (
+          [1, 2, 3].map(i => <div key={i} className="skeleton skeleton-line" style={{ height: 64, marginBottom: 10 }} />)
+        ) : convs.length === 0 ? (
+          <EmptyState emoji="💬" titulo="Sin conversaciones" subtitulo="Cuando un viaje se confirme, vas a poder coordinar por acá." />
         ) : (
           <div>
-            {CONVERSACIONES_DEMO.map(c => (
+            {convs.map(c => (
               <div
-                key={c.id}
-                onClick={() => nav(`/chat/${c.id}`)}
+                key={c.solicitudId}
+                onClick={() => nav(`/chat/${c.solicitudId}`)}
                 style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '14px 0', borderBottom: '1px solid var(--border)', cursor: 'pointer' }}
               >
-                <div style={{ position: 'relative' }}>
-                  <div style={{ width: 48, height: 48, background: c.color, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, color: c.textColor, fontSize: 16 }}>
-                    {iniciales(c.nombre)}
-                  </div>
-                  <div style={{ position: 'absolute', bottom: 0, right: 0, width: 12, height: 12, background: 'var(--green)', borderRadius: '50%', border: '2px solid white' }} />
+                <div style={{ width: 48, height: 48, background: '#FFF0EB', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, color: 'var(--orange)', fontSize: 16, flexShrink: 0 }}>
+                  {iniciales(c.otro.nombre)}
                 </div>
                 <div style={{ flex: 1, overflow: 'hidden' }}>
-                  <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--text)' }}>{c.nombre}</div>
-                  <div style={{ fontSize: 13, color: 'var(--text2)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.ultimo}</div>
+                  <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--text)' }}>{c.otro.nombre}</div>
+                  <div style={{ fontSize: 13, color: 'var(--text2)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {c.ultimoMensaje?.texto ?? `${c.viaje.origen} → ${c.viaje.destino}`}
+                  </div>
                 </div>
-                <div style={{ textAlign: 'right', flexShrink: 0 }}>
-                  <div style={{ fontSize: 11, color: 'var(--text3)', marginBottom: 4 }}>{c.hora}</div>
-                  {c.noLeidos > 0 && (
-                    <div style={{ width: 18, height: 18, background: 'var(--blue)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, color: 'white', fontWeight: 700, marginLeft: 'auto' }}>
-                      {c.noLeidos}
-                    </div>
-                  )}
-                </div>
+                {c.ultimoMensaje && (
+                  <div style={{ fontSize: 11, color: 'var(--text3)', flexShrink: 0 }}>
+                    {horaCorta(c.ultimoMensaje.created_at)}
+                  </div>
+                )}
               </div>
             ))}
           </div>

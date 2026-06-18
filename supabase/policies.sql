@@ -7,6 +7,7 @@ alter table public.usuarios enable row level security;
 alter table public.viajes enable row level security;
 alter table public.solicitudes enable row level security;
 alter table public.calificaciones enable row level security;
+alter table public.mensajes enable row level security;
 
 -- ---------- usuarios ----------
 drop policy if exists "usuarios_select_all" on public.usuarios;
@@ -68,6 +69,43 @@ create policy "solicitudes_cancelar_pasajero"
   on public.solicitudes for update
   using (auth.uid() = pasajero_id)
   with check (estado = 'cancelada');
+
+-- ---------- mensajes ----------
+-- Una solicitud aceptada vincula a un pasajero con el conductor del viaje.
+-- Solo esas dos partes pueden leer/escribir mensajes de esa conversación.
+
+-- Helper inline: ¿el usuario es parte de la solicitud (pasajero o conductor)?
+drop policy if exists "mensajes_select_partes" on public.mensajes;
+create policy "mensajes_select_partes"
+  on public.mensajes for select
+  using (
+    exists (
+      select 1 from public.solicitudes s
+      where s.id = solicitud_id
+        and (
+          s.pasajero_id = auth.uid()
+          or auth.uid() in (select conductor_id from public.viajes where id = s.viaje_id)
+        )
+    )
+  );
+
+-- Insertar: el emisor debe ser uno mismo, ser parte de la solicitud,
+-- y la solicitud debe estar aceptada (el chat se abre al confirmar el viaje).
+drop policy if exists "mensajes_insert_partes" on public.mensajes;
+create policy "mensajes_insert_partes"
+  on public.mensajes for insert
+  with check (
+    emisor_id = auth.uid()
+    and exists (
+      select 1 from public.solicitudes s
+      where s.id = solicitud_id
+        and s.estado = 'aceptada'
+        and (
+          s.pasajero_id = auth.uid()
+          or auth.uid() in (select conductor_id from public.viajes where id = s.viaje_id)
+        )
+    )
+  );
 
 -- ---------- calificaciones ----------
 drop policy if exists "calificaciones_select_all" on public.calificaciones;

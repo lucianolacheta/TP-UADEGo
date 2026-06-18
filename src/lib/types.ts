@@ -54,6 +54,23 @@ export interface SolicitudConPasajero extends Solicitud {
   viaje?: Viaje
 }
 
+export type Mensaje = {
+  id: string
+  solicitud_id: string
+  emisor_id: string
+  texto: string
+  created_at: string
+}
+
+// Resumen de conversación para la lista de Mensajes.
+// Una conversación = una solicitud aceptada, con el "otro" usuario y el viaje.
+export type ConversacionResumen = {
+  solicitudId: string
+  viaje: Viaje
+  otro: Pick<Usuario, 'id' | 'nombre'>
+  ultimoMensaje: Mensaje | null
+}
+
 export type Calificacion = {
   id: string
   viaje_id: string
@@ -77,6 +94,7 @@ export interface Database {
       viajes: { Row: Viaje; Insert: Partial<Viaje>; Update: Partial<Viaje>; Relationships: SinRelaciones }
       solicitudes: { Row: Solicitud; Insert: Partial<Solicitud>; Update: Partial<Solicitud>; Relationships: SinRelaciones }
       calificaciones: { Row: Calificacion; Insert: Partial<Calificacion>; Update: Partial<Calificacion>; Relationships: SinRelaciones }
+      mensajes: { Row: Mensaje; Insert: Partial<Mensaje>; Update: Partial<Mensaje>; Relationships: SinRelaciones }
     }
     Views: { [_ in never]: never }
     Functions: { [_ in never]: never }
