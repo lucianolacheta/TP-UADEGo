@@ -81,7 +81,7 @@ export default function Search() {
                 }}
               >
                 <span style={{ fontSize: 13, fontWeight: 700 }}>{t.label}</span>
-                <span style={{ fontSize: 11 }}>{tipo === 'vuelta' ? t.vuelta : t.ida}</span>
+                <span style={{ fontSize: 11 }}>{t.hint}</span>
               </button>
             ))}
           </div>

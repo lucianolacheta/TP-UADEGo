@@ -25,9 +25,11 @@ describe('horarioEnFranja', () => {
     expect(horarioEnFranja('18:00', 'manana')).toBe(false)
   })
 
-  it('clasifica noche desde las 18', () => {
-    expect(horarioEnFranja('19:30', 'noche')).toBe(true)
+  it('clasifica noche cerca de las 18:30 (ventana ±45min)', () => {
+    expect(horarioEnFranja('18:30', 'noche')).toBe(true)
+    expect(horarioEnFranja('19:00', 'noche')).toBe(true)
     expect(horarioEnFranja('12:00', 'noche')).toBe(false)
+    expect(horarioEnFranja('19:30', 'noche')).toBe(false) // fuera de ventana
   })
 })
 

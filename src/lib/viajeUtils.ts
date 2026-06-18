@@ -57,7 +57,7 @@ export function filtrarViajesBusqueda<T extends {
 
   let r = viajes.filter(v => v.conductor_id !== opts.excluirConductorId)
   r = r.filter(v => (tipo === 'ida' ? esViajeIda(v) : esViajeVuelta(v)))
-  if (opts.fecha) r = r.filter(v => v.fecha >= opts.fecha)
+  if (opts.fecha) r = r.filter(v => v.fecha >= opts.fecha!)
   if (opts.turno) r = r.filter(v => horarioEnFranja(v.horario, opts.turno!, tipo))
   if (opts.sede) {
     r = r.filter(v => (tipo === 'ida' ? v.destino === opts.sede : v.origen === opts.sede))
