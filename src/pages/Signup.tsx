@@ -4,15 +4,19 @@ import { IconMail, IconCheck, IconCar } from '@tabler/icons-react'
 import { useAuth } from '../contexts/AuthContext'
 import PasswordField from '../components/ui/PasswordField'
 
-export default function Login() {
-  const { session, loading, signInConPassword } = useAuth()
+export default function Signup() {
+  const { session, loading, signUp } = useAuth()
   const nav = useNavigate()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [password2, setPassword2] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [cargando, setCargando] = useState(false)
 
   const emailValido = email.endsWith('@uade.edu.ar')
+  const passOk = password.length >= 6
+  const coincide = password === password2
+  const puedeEnviar = emailValido && passOk && coincide
 
   if (loading) {
     return (
@@ -26,11 +30,17 @@ export default function Login() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
+    if (!passOk) { setError('La contraseña tiene que tener al menos 6 caracteres.'); return }
+    if (!coincide) { setError('Las contraseñas no coinciden.'); return }
     setCargando(true); setError(null)
-    const { error: err } = await signInConPassword(email, password)
+    const { error: err, necesitaConfirmar } = await signUp(email, password)
     setCargando(false)
     if (err) { setError(err); return }
-    nav('/', { replace: true })
+    if (necesitaConfirmar) {
+      nav('/verificar-email', { state: { email } })
+    } else {
+      nav('/bienvenida', { replace: true })
+    }
   }
 
   return (
@@ -40,13 +50,13 @@ export default function Login() {
           <IconCar size={32} color="white" />
         </div>
         <div style={{ fontSize: 26, fontWeight: 800, color: 'white', letterSpacing: -0.3 }}>UADE CarPool</div>
-        <div style={{ fontSize: 14, color: 'rgba(255,255,255,0.7)', marginTop: 4 }}>Movilidad universitaria segura</div>
+        <div style={{ fontSize: 14, color: 'rgba(255,255,255,0.7)', marginTop: 4 }}>Creá tu cuenta de estudiante</div>
       </div>
 
       <div style={{ padding: '28px 24px', flex: 1 }}>
         <div style={{ marginBottom: 24 }}>
-          <div style={{ fontSize: 22, fontWeight: 800, color: 'var(--text)', marginBottom: 6 }}>Iniciá sesión</div>
-          <div style={{ fontSize: 14, color: 'var(--text2)' }}>Solo estudiantes UADE verificados</div>
+          <div style={{ fontSize: 22, fontWeight: 800, color: 'var(--text)', marginBottom: 6 }}>Crear cuenta</div>
+          <div style={{ fontSize: 14, color: 'var(--text2)' }}>Te enviamos un link para verificar tu correo UADE</div>
         </div>
 
         <form onSubmit={handleSubmit}>
@@ -69,28 +79,33 @@ export default function Login() {
 
           <PasswordField
             label="Contraseña"
-            placeholder="Tu contraseña"
+            placeholder="Mínimo 6 caracteres"
             value={password}
             onChange={setPassword}
-            autoComplete="current-password"
+            autoComplete="new-password"
           />
 
-          <div style={{ textAlign: 'right', marginBottom: 16 }}>
-            <Link to="/recuperar" style={{ fontSize: 13, color: 'var(--blue)', fontWeight: 600 }}>
-              ¿Olvidaste tu contraseña?
-            </Link>
-          </div>
+          <PasswordField
+            label="Repetí la contraseña"
+            placeholder="Repetí tu contraseña"
+            value={password2}
+            onChange={setPassword2}
+            autoComplete="new-password"
+          />
+          {password2.length > 0 && !coincide && (
+            <p style={{ color: 'var(--danger)', fontSize: 12, marginTop: -8, marginBottom: 12 }}>Las contraseñas no coinciden.</p>
+          )}
 
           {error && <p style={{ color: 'var(--danger)', fontSize: 14, marginBottom: 12 }}>{error}</p>}
 
-          <button className="btn btn-primary" type="submit" disabled={cargando || !emailValido || !password}>
-            {cargando ? 'Entrando...' : 'Iniciar sesión'}
+          <button className="btn btn-primary" type="submit" disabled={cargando || !puedeEnviar}>
+            {cargando ? 'Creando cuenta...' : 'Crear cuenta'}
           </button>
         </form>
 
         <div style={{ textAlign: 'center', marginTop: 24, fontSize: 14, color: 'var(--text2)' }}>
-          ¿No tenés cuenta?{' '}
-          <Link to="/registro" style={{ color: 'var(--blue)', fontWeight: 700 }}>Creá una</Link>
+          ¿Ya tenés cuenta?{' '}
+          <Link to="/login" style={{ color: 'var(--blue)', fontWeight: 700 }}>Iniciá sesión</Link>
         </div>
       </div>
     </div>

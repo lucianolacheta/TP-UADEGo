@@ -6,6 +6,9 @@ import Layout from './components/Layout'
 import AuthCallback from './pages/AuthCallback'
 import Splash from './pages/Splash'
 import Login from './pages/Login'
+import Signup from './pages/Signup'
+import ForgotPassword from './pages/ForgotPassword'
+import ResetPassword from './pages/ResetPassword'
 import VerifyEmail from './pages/VerifyEmail'
 import Welcome from './pages/Welcome'
 import ProfileSetup from './pages/ProfileSetup'
@@ -48,6 +51,9 @@ export default function App() {
       {/* Públicas */}
       <Route path="/splash" element={<Splash />} />
       <Route path="/login" element={<Login />} />
+      <Route path="/registro" element={<Signup />} />
+      <Route path="/recuperar" element={<ForgotPassword />} />
+      <Route path="/reset-password" element={<ResetPassword />} />
       <Route path="/auth/callback" element={<AuthCallback />} />
       <Route path="/verificar-email" element={<VerifyEmail />} />
       <Route path="/bienvenida" element={<Welcome />} />
