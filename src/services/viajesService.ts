@@ -50,7 +50,14 @@ export async function getSolicitudPropia(viajeId: string, pasajeroId: string): P
 export async function insertSolicitud(viajeId: string, pasajeroId: string, mensaje: string | null) {
   // upsert: si ya existe una solicitud cancelada/rechazada, la reutiliza en vez de insertar
   const { error } = await supabase.from('solicitudes').upsert(
-    { viaje_id: viajeId, pasajero_id: pasajeroId, mensaje, estado: 'pendiente', fecha_respuesta: null },
+    {
+      viaje_id: viajeId,
+      pasajero_id: pasajeroId,
+      mensaje,
+      estado: 'pendiente',
+      fecha_solicitud: new Date().toISOString(),
+      fecha_respuesta: null,
+    },
     { onConflict: 'viaje_id,pasajero_id' }
   )
   if (error) throw error

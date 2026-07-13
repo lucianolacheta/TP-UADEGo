@@ -225,8 +225,12 @@ export default function TripDetail() {
                 style={{ color: 'var(--danger)', borderColor: 'var(--danger)', marginTop: 12 }}
                 onClick={async () => {
                   if (!confirm('¿Cancelar tu solicitud?')) return
-                  await cancelarSolicitud(solicitudPropia.id)
-                  await cargar()
+                  try {
+                    await cancelarSolicitud(solicitudPropia.id)
+                    await cargar()
+                  } catch {
+                    setError('No se pudo cancelar la solicitud.')
+                  }
                 }}
               >
                 Cancelar solicitud

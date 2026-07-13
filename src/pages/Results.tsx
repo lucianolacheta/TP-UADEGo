@@ -4,7 +4,7 @@ import { IconArrowLeft, IconCurrencyDollar, IconStar } from '@tabler/icons-react
 import type { ViajeConConductor } from '../lib/types'
 import { getViajesDisponibles } from '../services/viajesService'
 import { filtrarViajesBusqueda, type FranjaHorario, type TipoTrayecto, type Coordenadas } from '../lib/viajeUtils'
-import { coordsOrigen } from '../lib/googleMaps'
+import { coordsBarrioLocal } from '../lib/googleMaps'
 import { useAuth } from '../contexts/AuthContext'
 import RideCard from '../components/ui/RideCard'
 import EmptyState from '../components/ui/EmptyState'
@@ -34,15 +34,16 @@ export default function Results() {
       try {
         let vs = await getViajesDisponibles()
 
-        // Si hay búsqueda por coords, geocodificar los viajes que no tienen coords guardadas
+        // Completar coords con barrios locales (sin APIs externas)
         if (coordsBusqueda) {
-          vs = await Promise.all(vs.map(async v => {
-            if (v.origen_lat != null && v.origen_lng != null) return v
-            // Geocodificar via Google Maps
-            const coords = await coordsOrigen(v.origen).catch(() => null)
-            if (coords) return { ...v, origen_lat: coords.lat, origen_lng: coords.lng }
-            return v
-          }))
+          for (const v of vs) {
+            if (v.origen_lat != null && v.origen_lng != null) continue
+            const coords = coordsBarrioLocal(v.origen)
+            if (coords) {
+              v.origen_lat = coords.lat
+              v.origen_lng = coords.lng
+            }
+          }
         }
 
         setViajes(filtrarViajesBusqueda(vs, {

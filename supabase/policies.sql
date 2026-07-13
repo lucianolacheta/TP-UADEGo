@@ -70,6 +70,19 @@ create policy "solicitudes_cancelar_pasajero"
   using (auth.uid() = pasajero_id)
   with check (estado = 'cancelada');
 
+-- El pasajero puede volver a solicitar si había cancelado o lo habían rechazado
+drop policy if exists "solicitudes_reactivar_pasajero" on public.solicitudes;
+create policy "solicitudes_reactivar_pasajero"
+  on public.solicitudes for update
+  using (
+    auth.uid() = pasajero_id
+    and estado in ('cancelada', 'rechazada')
+  )
+  with check (
+    auth.uid() = pasajero_id
+    and estado = 'pendiente'
+  );
+
 -- ---------- mensajes ----------
 -- Una solicitud aceptada vincula a un pasajero con el conductor del viaje.
 -- Solo esas dos partes pueden leer/escribir mensajes de esa conversación.

@@ -38,7 +38,7 @@ export default function PlacesInput({ value, onChange, placeholder, required, cl
     setTexto(v)
     onChange(v)
     if (debounce.current) clearTimeout(debounce.current)
-    debounce.current = setTimeout(() => { void cargarSugerencias(v) }, 250)
+    debounce.current = setTimeout(() => { void cargarSugerencias(v) }, 400)
   }
 
   function handleFocus() {
